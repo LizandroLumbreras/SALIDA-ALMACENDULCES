@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Salida - Almacén Dulces</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      padding: 20px;
+      margin: 0;
+      background: linear-gradient(to right, #00416A, #E4E5E6);
+      color: white;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    .marca-agua {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.07;
+      z-index: 0;
+      max-width: 90%;
+      pointer-events: none;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .formulario {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      max-width: 600px;
+      margin: auto;
+      z-index: 1;
+      position: relative;
+    }
+
+    input, button, select {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+    }
+
+    button {
+      background: #e60000;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #b00000;
+    }
+
+    .producto {
+      background: white;
+      color: black;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <img src="https://i.ibb.co/VgScy9X/proveedora-logo.png" class="marca-agua" alt="Marca de agua" />
+  <h1>Salida - Almacén Dulces</h1>
+
+  <div class="formulario">
+    <input type="text" id="codigoInput" placeholder="Código del producto" />
+    <input type="number" id="cantidadInput" placeholder="Cantidad" />
+    <input type="text" id="destinoInput" placeholder="Sucursal destino" />
+    <input type="text" id="recibeInput" placeholder="Recibe" />
+    <input type="text" id="entregaInput" placeholder="Entrega" />
+    <button onclick="agregarProducto()">Agregar producto</button>
+
+    <div id="productosAgregados"></div>
+
+    <button onclick="guardarSalida()">Guardar salida</button>
+  </div>
+
+  <script>
+    // Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
+      authDomain: "inventariopv-643f1.firebaseapp.com",
+      projectId: "inventariopv-643f1",
+      storageBucket: "inventariopv-643f1.appspot.com",
+      messagingSenderId: "96242533231",
+      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let productos = [];
+
+    function agregarProducto() {
+      const codigo = document.getElementById('codigoInput').value.trim();
+      const cantidad = parseFloat(document.getElementById('cantidadInput').value.trim());
+
+      if (!codigo || !cantidad) {
+        alert("Código y cantidad son obligatorios");
+        return;
+      }
+
+      productos.push({ codigo, cantidad });
+      mostrarProductos();
+      document.getElementById('codigoInput').value = '';
+      document.getElementById('cantidadInput').value = '';
+    }
+
+    function mostrarProductos() {
+      const contenedor = document.getElementById('productosAgregados');
+      contenedor.innerHTML = '';
+      productos.forEach((prod, index) => {
+        contenedor.innerHTML += `
+          <div class="producto">
+            <strong>Código:</strong> ${prod.codigo} |
+            <strong>Cantidad:</strong> ${prod.cantidad}
+            <button onclick="eliminarProducto(${index})">❌</button>
+          </div>
+        `;
+      });
+    }
+
+    function eliminarProducto(index) {
+      productos.splice(index, 1);
+      mostrarProductos();
+    }
+
+    async function obtenerFolio() {
+      const ref = db.collection("consecutivos").doc("almacen_dulces_salidas");
+      const doc = await ref.get();
+      let actual = doc.exists ? doc.data().valor : 0;
+      actual++;
+      await ref.set({ valor: actual });
+      return actual;
+    }
+
+    async function guardarSalida() {
+      if (productos.length === 0) {
+        alert("Agrega productos a la salida");
+        return;
+      }
+
+      const destino = document.getElementById('destinoInput').value.trim();
+      const recibe = document.getElementById('recibeInput').value.trim();
+      const entrega = document.getElementById('entregaInput').value.trim();
+      if (!destino || !recibe || !entrega) {
+        alert("Llena todos los campos de salida");
+        return;
+      }
+
+      const folio = await obtenerFolio();
+      const fecha = new Date().toISOString();
+
+      const promesas = productos.map((prod) => {
+        return db.collection("alm
