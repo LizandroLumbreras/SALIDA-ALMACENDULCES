@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Productos por línea - Dulces</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #00416A, #E4E5E6);
+      margin: 0;
+      padding: 20px;
+      color: white;
+      box-sizing: border-box;
+      min-height: 100vh;
+      position: relative;
+    }
+    .marca-agua {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.07;
+      z-index: 0;
+      max-width: 90%;
+      pointer-events: none;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .contenedor-productos {
+      max-width: 800px;
+      margin: auto;
+      z-index: 1;
+      position: relative;
+    }
+    .producto {
+      background: white;
+      color: black;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .producto strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .producto input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    .producto button {
+      background: #e60000;
+      color: white;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      width: 100%;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .producto button:hover {
+      background: #b00000;
+    }
+  </style>
+</head>
+<body>
+  <img src="logo_proveedora.png" class="marca-agua" alt="Marca de agua">
+  <h2>Productos de la línea <span id="nombreLinea"></span></h2>
+  <div class="contenedor-productos" id="listaProductos"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
+      authDomain: "inventariopv-643f1.firebaseapp.com",
+      projectId: "inventariopv-643f1",
+      storageBucket: "inventariopv-643f1.appspot.com",
+      messagingSenderId: "96242533231",
+      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const linea = localStorage.getItem("lineaSeleccionada") || "";
+    document.getElementById("nombreLinea").textContent = linea;
+
+    const contenedor = document.getElementById("listaProductos");
+
+    async function cargarProductos() {
+      const querySnapshot = await db.collection("productos").where("departamento", "==", 3).get();
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const descripcion = data.Descripcion || "Sin nombre";
+
+        if (descripcion.toUpperCase().includes(linea.toUpperCase())) {
+          const div = document.createElement("div");
+          div.className = "producto";
+          div.innerHTML = `
+            <strong>${descripcion}</strong>
+            <div>Código: ${data["Codigo Barra"] || ""}</div>
+            <input type="number" min="1" placeholder="Cantidad" id="cantidad-${doc.id}" />
+            <button onclick="agregar('${doc.id}', '${data["Codigo Barra"]}', '${descripcion.replace(/'/g, "")}')">Agregar</button>
+          `;
+          contenedor.appendChild(div);
+        }
+      });
+    }
+
+    function agregar(id, codigo, descripcion) {
+      const input = document.getElementById("cantidad-" + id);
+      const cantidad = parseFloat(input.value);
+      if (!cantidad || cantidad <= 0) {
+        alert("Ingresa una cantidad válida");
+        return;
+      }
+      const productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
+      productos.push({ id, codigo, descripcion, cantidad });
+      localStorage.setItem("productosSeleccionados", JSON.stringify(productos));
+      input.value = "";
+    }
+
+    cargarProductos();
+  </script>
+</body>
+</html>
