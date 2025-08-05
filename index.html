@@ -2,19 +2,28 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Salida - Almacén Dulces</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+  <title>Registrar salida - Dulces</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
-      font-family: 'Poppins', sans-serif;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #00416A, #E4E5E6);
       padding: 20px;
       margin: 0;
-      background: linear-gradient(to right, #00416A, #E4E5E6);
       color: white;
       min-height: 100vh;
+      box-sizing: border-box;
       position: relative;
+    }
+
+    input[list], select, input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: none;
+      box-sizing: border-box;
     }
 
     .marca-agua {
@@ -22,77 +31,117 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      opacity: 0.07;
+      opacity: 0.20;
       z-index: 0;
-      max-width: 90%;
+      max-width: 80%;
       pointer-events: none;
     }
 
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .formulario {
+    .contenedor {
       background: rgba(255, 255, 255, 0.1);
-      padding: 20px;
       border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      padding: 30px;
       max-width: 600px;
       margin: auto;
-      z-index: 1;
       position: relative;
+      z-index: 2;
     }
 
-    input, button, select {
+    label {
       display: block;
-      width: 100%;
-      margin: 10px 0;
-      padding: 12px;
-      font-size: 16px;
-      border-radius: 8px;
-      border: none;
-      outline: none;
+      margin-bottom: 8px;
     }
 
-    button {
-      background: #e60000;
-      color: white;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #b00000;
-    }
-
-    .producto {
-      background: white;
+    select, input[type="date"] {
       color: black;
-      padding: 10px;
-      border-radius: 8px;
-      margin-bottom: 10px;
+    }
+
+    .boton {
+      background-color: #d32f2f;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .boton:hover {
+      background-color: #b71c1c;
+    }
+
+    .folio {
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+
+    .descargar-manual {
+      display: block;
+      margin-top: 20px;
+      text-align: center;
+      padding: 12px 20px;
+      background: #00416A;
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
-  <img src="logo_proveedora.webp" class="marca-agua" alt="Marca de agua" />
-  <h1>Salida - Almacén Dulces</h1>
+  <img src="logo_proveedora.png" alt="Marca de agua" class="marca-agua">
+  <div class="contenedor">
+    <h2>Registrar salida - Dulces</h2>
+    <p class="folio">📌 Folio próximo: <strong id="proximoFolio">Cargando...</strong></p>
 
-  <div class="formulario">
-    <input type="text" id="codigoInput" placeholder="Código del producto" />
-    <input type="number" id="cantidadInput" placeholder="Cantidad" />
-    <input type="text" id="destinoInput" placeholder="Sucursal destino" />
-    <input type="text" id="recibeInput" placeholder="Recibe" />
-    <input type="text" id="entregaInput" placeholder="Entrega" />
-    <button onclick="agregarProducto()">Agregar producto</button>
+    <label for="fecha">Fecha:</label>
+    <input type="date" id="fecha" readonly>
 
-    <div id="productosAgregados"></div>
+    <label for="entrega">Entrega:</label>
+    <select id="entrega">
+      <option value="">Selecciona quien entrega</option>
+      <option value="Arturo">Arturo</option>
+      <option value="Octaviano">Octaviano</option>
+    </select>
 
-    <button onclick="guardarSalida()">Guardar salida</button>
+    <label for="recibe">Recibe:</label>
+    <input list="recibe-lista" id="recibe" name="recibe" placeholder="Selecciona o escribe nombre" />
+    <datalist id="recibe-lista">
+      <option value="Luis Miguel Medellin Escalona">
+      <option value="Sergio Becerra Maravilla">
+      <option value="Eduardo Cuellar Vazquez">
+      <option value="Fernando Flores de la Cerda">
+      <option value="David Wenseslao Morales Martinez">
+    </datalist>
+
+    <label for="destino">Destino:</label>
+    <input list="destinos" id="destino" name="destino" placeholder="Selecciona o escribe destino" />
+    <datalist id="destinos">
+      <option value="BODEGA MATRIZ MADERO 690">
+      <option value="SUCURSAL GUADALUPE B41">
+      <option value="SUCURSAL MONTEMORELOS">
+      <option value="SUCURSAL ALLENDE">
+      <option value="SUPER TIENDAS RICO">
+      <option value="ROBERTO YADO">
+      <option value="COMERCIALIZADORA CAVAZOS">
+      <option value="EL PARIENTE ALIMENTOS">
+      <option value="LA MISION SUC DIAZ ORDAZ">
+      <option value="LA MISION SUC VILLEGAS">
+      <option value="LA MISION SUC PETACA">
+      <option value="LA MISION SUC ARBOLEDAS">
+      <option value="LA MISION SUCR MORELOS">
+      <option value="LA MISION SUCR ALLENDE">
+    </datalist>
+
+    <button class="boton" onclick="continuar()">Continuar</button>
+    <a href="Manual_Salida_Dulces.pdf" download class="descargar-manual">
+      📄 Descargar Manual de Uso
+    </a>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
       authDomain: "inventariopv-643f1.firebaseapp.com",
@@ -104,67 +153,47 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let productos = [];
+    async function cargarFolio() {
+      const docRef = db.collection("consecutivos").doc("salidas_dulces");
+      const docSnap = await docRef.get();
+      let numero = 1;
+      if (docSnap.exists) {
+        numero = docSnap.data().ultimo || 1;
+      }
+      const folioFinal = "SALDUL - " + String(numero).padStart(4, "0");
+      document.getElementById("proximoFolio").textContent = folioFinal;
+    }
 
-    function agregarProducto() {
-      const codigo = document.getElementById('codigoInput').value.trim();
-      const cantidad = parseFloat(document.getElementById('cantidadInput').value.trim());
+    function ponerFechaHoy() {
+      const hoy = new Date();
+      const yyyy = hoy.getFullYear();
+      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+      const dd = String(hoy.getDate()).padStart(2, '0');
+      const fecha = `${yyyy}-${mm}-${dd}`;
+      document.getElementById("fecha").value = fecha;
+      localStorage.setItem("fecha", fecha);
+    }
 
-      if (!codigo || !cantidad) {
-        alert("Código y cantidad son obligatorios");
+    function continuar() {
+      const entrega = document.getElementById("entrega").value;
+      const recibe = document.getElementById("recibe").value;
+      const destino = document.getElementById("destino").value;
+
+      if (!entrega || !recibe || !destino) {
+        alert("Por favor completa todos los campos.");
         return;
       }
 
-      productos.push({ codigo, cantidad });
-      mostrarProductos();
-      document.getElementById('codigoInput').value = '';
-      document.getElementById('cantidadInput').value = '';
+      localStorage.setItem("entrega", entrega);
+      localStorage.setItem("recibe", recibe);
+      localStorage.setItem("destino", destino);
+      window.location.href = "pantalla2.html";
     }
 
-    function mostrarProductos() {
-      const contenedor = document.getElementById('productosAgregados');
-      contenedor.innerHTML = '';
-      productos.forEach((prod, index) => {
-        contenedor.innerHTML += `
-          <div class="producto">
-            <strong>Código:</strong> ${prod.codigo} |
-            <strong>Cantidad:</strong> ${prod.cantidad}
-            <button onclick="eliminarProducto(${index})">❌</button>
-          </div>
-        `;
-      });
-    }
-
-    function eliminarProducto(index) {
-      productos.splice(index, 1);
-      mostrarProductos();
-    }
-
-    async function obtenerFolio() {
-      const ref = db.collection("consecutivos").doc("almacen_dulces_salidas");
-      const doc = await ref.get();
-      let actual = doc.exists ? doc.data().valor : 0;
-      actual++;
-      await ref.set({ valor: actual });
-      return actual;
-    }
-
-    async function guardarSalida() {
-      if (productos.length === 0) {
-        alert("Agrega productos a la salida");
-        return;
-      }
-
-      const destino = document.getElementById('destinoInput').value.trim();
-      const recibe = document.getElementById('recibeInput').value.trim();
-      const entrega = document.getElementById('entregaInput').value.trim();
-      if (!destino || !recibe || !entrega) {
-        alert("Llena todos los campos de salida");
-        return;
-      }
-
-      const folio = await obtenerFolio();
-      const fecha = new Date().toISOString();
-
-      const promesas = productos.map((prod) => {
-        return db.collection("alm
+    document.addEventListener("DOMContentLoaded", () => {
+      cargarFolio();
+      ponerFechaHoy();
+    });
+  </script>
+</body>
+</html>
