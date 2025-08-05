@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+-<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Productos por línea - Dulces</title>
+  <title>Resumen de salida - Dulces</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -11,8 +11,8 @@
       margin: 0;
       padding: 20px;
       color: white;
-      box-sizing: border-box;
       min-height: 100vh;
+      box-sizing: border-box;
       position: relative;
     }
     .marca-agua {
@@ -25,56 +25,63 @@
       max-width: 90%;
       pointer-events: none;
     }
-    h2 {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .contenedor-productos {
+    .contenedor {
       max-width: 800px;
       margin: auto;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 20px;
       z-index: 1;
       position: relative;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
     }
     .producto {
       background: white;
       color: black;
-      padding: 15px;
       border-radius: 10px;
-      margin-bottom: 15px;
+      padding: 15px;
+      margin-bottom: 10px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
-    .producto strong {
-      display: block;
-      margin-bottom: 5px;
-    }
-    .producto input {
-      width: 100%;
-      padding: 8px;
-      margin-top: 8px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
     .producto button {
-      background: #e60000;
-      color: white;
-      padding: 10px;
       margin-top: 10px;
+      background-color: #e60000;
+      color: white;
       border: none;
-      width: 100%;
+      padding: 8px 12px;
       border-radius: 6px;
-      font-size: 16px;
       cursor: pointer;
     }
     .producto button:hover {
-      background: #b00000;
+      background-color: #b00000;
+    }
+    #guardarBtn {
+      display: block;
+      width: 100%;
+      margin-top: 20px;
+      background: #d32f2f;
+      color: white;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #guardarBtn:hover {
+      background: #b71c1c;
     }
   </style>
 </head>
 <body>
-  <img src="logo_proveedora.webp" class="marca-agua" alt="Marca de agua">
-  <h2>Productos de la línea <span id="nombreLinea"></span></h2>
-  <div class="contenedor-productos" id="listaProductos"></div>
+  <img src="logo_proveedora.png" class="marca-agua" alt="Marca de agua">
+  <div class="contenedor">
+    <h2>Resumen de productos agregados</h2>
+    <div id="listaResumen"></div>
+    <button id="guardarBtn" onclick="guardarSalida()">Guardar salida</button>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
@@ -91,45 +98,73 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    const linea = localStorage.getItem("lineaSeleccionada") || "";
-    document.getElementById("nombreLinea").textContent = linea;
+    let productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
+    const contenedor = document.getElementById("listaResumen");
 
-    const contenedor = document.getElementById("listaProductos");
-
-    async function cargarProductos() {
-      const querySnapshot = await db.collection("productos").where("departamento", "==", 3).get();
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const descripcion = data.Descripcion || "Sin nombre";
-
-        if (descripcion.toUpperCase().includes(linea.toUpperCase())) {
-          const div = document.createElement("div");
-          div.className = "producto";
-          div.innerHTML = `
-            <strong>${descripcion}</strong>
-            <div>Código: ${data["Codigo Barra"] || ""}</div>
-            <input type="number" min="1" placeholder="Cantidad" id="cantidad-${doc.id}" />
-            <button onclick="agregar('${doc.id}', '${data["Codigo Barra"]}', '${descripcion.replace(/'/g, "")}')">Agregar</button>
-          `;
-          contenedor.appendChild(div);
-        }
+    function mostrarResumen() {
+      contenedor.innerHTML = "";
+      productos.forEach((prod, index) => {
+        const div = document.createElement("div");
+        div.className = "producto";
+        div.innerHTML = `
+          <strong>${prod.descripcion}</strong><br>
+          Código: ${prod.codigo}<br>
+          Cantidad: ${prod.cantidad}<br>
+          <button onclick="eliminar(${index})">Eliminar</button>
+        `;
+        contenedor.appendChild(div);
       });
     }
 
-    function agregar(id, codigo, descripcion) {
-      const input = document.getElementById("cantidad-" + id);
-      const cantidad = parseFloat(input.value);
-      if (!cantidad || cantidad <= 0) {
-        alert("Ingresa una cantidad válida");
-        return;
-      }
-      const productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
-      productos.push({ id, codigo, descripcion, cantidad });
+    function eliminar(index) {
+      productos.splice(index, 1);
       localStorage.setItem("productosSeleccionados", JSON.stringify(productos));
-      input.value = "";
+      mostrarResumen();
     }
 
-    cargarProductos();
+    async function obtenerFolio() {
+      const ref = db.collection("consecutivos").doc("salidas_dulces");
+      const doc = await ref.get();
+      let actual = doc.exists ? doc.data().ultimo : 0;
+      actual++;
+      await ref.set({ ultimo: actual });
+      return actual;
+    }
+
+    async function guardarSalida() {
+      if (productos.length === 0) {
+        alert("No hay productos para guardar");
+        return;
+      }
+
+      const folio = await obtenerFolio();
+      const fecha = localStorage.getItem("fecha") || new Date().toISOString();
+      const entrega = localStorage.getItem("entrega") || "";
+      const recibe = localStorage.getItem("recibe") || "";
+      const destino = localStorage.getItem("destino") || "";
+
+      const folioText = "SALDUL - " + String(folio).padStart(4, "0");
+
+      const promesas = productos.map((p) => {
+        return db.collection("almacenes").doc("Almacen_Dulces").collection("salidas").add({
+          codigo: p.codigo,
+          descripcion: p.descripcion,
+          cantidad: p.cantidad,
+          fecha: fecha,
+          folio: folioText,
+          entrega: entrega,
+          recibe: recibe,
+          destino: destino
+        });
+      });
+
+      await Promise.all(promesas);
+      alert("Salida guardada con folio: " + folioText);
+      localStorage.removeItem("productosSeleccionados");
+      window.location.href = "pantalla2.html";
+    }
+
+    mostrarResumen();
   </script>
 </body>
 </html>
