@@ -107,13 +107,13 @@
       const texto = this.value.trim().toLowerCase();
       if (texto.length < 3) return;
 
-      const snapshot = await db.collection("productos").where("departamento", "==", 3).get();
+      const snapshot = await db.collection("productos").where("Departamento", "==", "3").get();
       let encontrado = null;
 
       snapshot.forEach(doc => {
         const data = doc.data();
         const codigoBarra = (data["Codigo Barra"] || "").toString().padStart(13, '0');
-        const descripcion = (data.Descripcion || "").toLowerCase();
+        const concepto = (data.Concepto || "").toLowerCase();
 
         if (
           codigoBarra.includes(texto.padStart(13, '0')) ||
