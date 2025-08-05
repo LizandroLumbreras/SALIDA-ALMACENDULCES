@@ -106,23 +106,34 @@
       const texto = this.value.trim().toLowerCase();
       if (texto.length < 3) return;
 
-      const snapshot = await db.collection("productos").where("departamento", "==", 3).get();
-      const encontrados = snapshot.docs.find(doc => {
-        const data = doc.data();
-        return data["Codigo Barra"] === texto || (data.Descripcion && data.Descripcion.toLowerCase().includes(texto));
-      });
+   const snapshot = await db.collection("productos").where("departamento", "==", 3).get();
+let encontrados = null;
 
-      if (encontrados) {
-        productoSeleccionado = encontrados.data();
-        productoSeleccionado.id = encontrados.id;
-        document.getElementById("descripcion").textContent = productoSeleccionado.Descripcion || "Sin descripción";
-        document.getElementById("codigo").textContent = "Código: " + (productoSeleccionado["Codigo Barra"] || "");
-        document.getElementById("cantidad").value = "";
-        document.getElementById("infoProducto").style.display = "block";
-      } else {
-        document.getElementById("infoProducto").style.display = "none";
-        productoSeleccionado = null;
-      }
+const textoCodigo = texto.padStart(13, '0'); // para comparación con ceros
+
+snapshot.forEach(doc => {
+  const data = doc.data();
+  const codigo = (data["Codigo Barra"] || "").toString().padStart(13, '0');
+  const descripcion = (data.Descripcion || "").toLowerCase();
+
+  if (
+    codigo.includes(textoCodigo) ||  // buscar código parcial
+    descripcion.includes(texto)      // buscar nombre parcial
+  ) {
+    encontrados = { id: doc.id, ...data };
+  }
+});
+
+     if (encontrados) {
+  productoSeleccionado = encontrados;
+  document.getElementById("descripcion").textContent = productoSeleccionado.Descripcion || "Sin descripción";
+  document.getElementById("codigo").textContent = "Código: " + (productoSeleccionado["Codigo Barra"] || "");
+  document.getElementById("cantidad").value = "";
+  document.getElementById("infoProducto").style.display = "block";
+} else {
+  document.getElementById("infoProducto").style.display = "none";
+  productoSeleccionado = null;
+}
     });
 
     function agregarProducto() {
