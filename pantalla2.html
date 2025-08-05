@@ -46,26 +46,6 @@
       border: none;
       font-size: 16px;
     }
-    .sugerencias {
-      background: white;
-      color: black;
-      border-radius: 6px;
-      overflow: hidden;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      max-height: 200px;
-      overflow-y: auto;
-      position: absolute;
-      width: 100%;
-      z-index: 5;
-    }
-    .sugerencias div {
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
-      cursor: pointer;
-    }
-    .sugerencias div:hover {
-      background-color: #f0f0f0;
-    }
     .info-producto {
       background: white;
       color: black;
@@ -73,6 +53,10 @@
       border-radius: 10px;
       margin-top: 10px;
       display: none;
+    }
+    .info-producto strong {
+      display: block;
+      margin-bottom: 5px;
     }
     button {
       background-color: #e60000;
@@ -94,8 +78,6 @@
   <div class="contenedor">
     <h2>Buscar producto</h2>
     <input type="text" id="buscador" placeholder="Buscar por código o nombre...">
-    <div id="sugerencias" class="sugerencias"></div>
-
     <div class="info-producto" id="infoProducto">
       <strong id="descripcion"></strong>
       <div id="codigo"></div>
@@ -105,116 +87,90 @@
     </div>
   </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
-    authDomain: "inventariopv-643f1.firebaseapp.com",
-    projectId: "inventariopv-643f1",
-    storageBucket: "inventariopv-643f1.appspot.com",
-    messagingSenderId: "96242533231",
-    appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
+      authDomain: "inventariopv-643f1.firebaseapp.com",
+      projectId: "inventariopv-643f1",
+      storageBucket: "inventariopv-643f1.appspot.com",
+      messagingSenderId: "96242533231",
+      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-  let productoSeleccionado = null;
+    let productoSeleccionado = null;
 
-  document.getElementById("buscador").addEventListener("input", async function () {
-    const texto = this.value.trim().toLowerCase();
-    if (texto.length < 3) return;
+    document.getElementById("buscador").addEventListener("input", async function () {
+      const texto = this.value.trim().toLowerCase();
+      if (texto.length < 3) return;
 
-    const snapshot = await db.collection("productos").where("departamento", "==", 3).get();
-    let encontrado = null;
+      const snapshot = await db.collection("productos").where("departamento", "==", 3).get();
+      let encontrado = null;
 
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const codigoBarra = (data["Codigo Barra"] || "").toString().padStart(13, '0');
-      const descripcion = (data.Descripcion || "").toLowerCase();
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const codigoBarra = (data["Codigo Barra"] || "").toString().padStart(13, '0');
+        const descripcion = (data.Descripcion || "").toLowerCase();
 
-      if (
-        codigoBarra.includes(texto.padStart(13, '0')) || // coincide con código
-        descripcion.includes(texto)                      // o con descripción
-      ) {
-        encontrado = { id: doc.id, ...data };
+        if (
+          codigoBarra.includes(texto.padStart(13, '0')) ||
+          descripcion.includes(texto)
+        ) {
+          encontrado = { id: doc.id, ...data };
+        }
+      });
+
+      if (encontrado) {
+        productoSeleccionado = encontrado;
+        document.getElementById("descripcion").textContent = productoSeleccionado.Descripcion || "Sin descripción";
+        document.getElementById("codigo").textContent = "Código: " + (productoSeleccionado["Codigo Barra"] || "");
+        document.getElementById("cantidad").value = "";
+        document.getElementById("infoProducto").style.display = "block";
+      } else {
+        document.getElementById("infoProducto").style.display = "none";
+        productoSeleccionado = null;
       }
     });
 
-    if (encontrado) {
-      productoSeleccionado = encontrado;
-      document.getElementById("descripcion").textContent = productoSeleccionado.Descripcion || "Sin descripción";
-      document.getElementById("codigo").textContent = "Código: " + (productoSeleccionado["Codigo Barra"] || "");
-      document.getElementById("cantidad").value = "";
-      document.getElementById("infoProducto").style.display = "block";
-    } else {
-      document.getElementById("infoProducto").style.display = "none";
-      productoSeleccionado = null;
-    }
-  });
-
-  function agregarProducto() {
-    const cantidad = parseFloat(document.getElementById("cantidad").value);
-    if (!cantidad || cantidad <= 0 || !productoSeleccionado) {
-      alert("Verifica los datos");
-      return;
-    }
-
-    const productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
-    productos.push({
-      id: productoSeleccionado.id,
-      codigo: productoSeleccionado["Codigo Barra"],
-      descripcion: productoSeleccionado.Descripcion,
-      cantidad: cantidad
-    });
-
-    localStorage.setItem("productosSeleccionados", JSON.stringify(productos));
-    document.getElementById("infoProducto").style.display = "none";
-    document.getElementById("buscador").value = "";
-    productoSeleccionado = null;
-    actualizarBotonCarrito();
-  }
-
-  function irAlCarrito() {
-    window.location.href = "pantalla3.html";
-  }
-
-  function actualizarBotonCarrito() {
-    const productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
-    document.getElementById("verCarritoBtn").style.display = productos.length > 0 ? "block" : "none";
-  }
-
-  actualizarBotonCarrito();
-</script>
+    function agregarProducto() {
+      const cantidad = parseFloat(document.getElementById("cantidad").value);
+      if (!cantidad || cantidad <= 0 || !productoSeleccionado) {
+        alert("Verifica los datos");
+        return;
+      }
 
       const productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
       productos.push({
         id: productoSeleccionado.id,
-        codigo: productoSeleccionado.codigo,
-        descripcion: productoSeleccionado.descripcion,
-        unidad: productoSeleccionado.unidad,
+        codigo: productoSeleccionado["Codigo Barra"],
+        descripcion: productoSeleccionado.Descripcion,
         cantidad: cantidad
       });
+
       localStorage.setItem("productosSeleccionados", JSON.stringify(productos));
 
-      // Reiniciar vista
+      // Reiniciar campos
       productoSeleccionado = null;
       document.getElementById("infoProducto").style.display = "none";
       document.getElementById("buscador").value = "";
       document.getElementById("cantidad").value = "";
+
+      actualizarBotonCarrito();
     }
+
     function irAlCarrito() {
-  window.location.href = "pantalla3.html";
-}
+      window.location.href = "pantalla3.html";
+    }
 
-function actualizarBotonCarrito() {
-  const productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
-  document.getElementById("verCarritoBtn").style.display = productos.length > 0 ? "block" : "none";
-}
+    function actualizarBotonCarrito() {
+      const productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
+      document.getElementById("verCarritoBtn").style.display = productos.length > 0 ? "block" : "none";
+    }
 
-// Mostrar botón si ya hay productos
-actualizarBotonCarrito();
-
+    actualizarBotonCarrito();
   </script>
 </body>
 </html>
