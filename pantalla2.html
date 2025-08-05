@@ -101,6 +101,7 @@
       <div id="codigo"></div>
       <input type="number" id="cantidad" placeholder="Cantidad a retirar">
       <button onclick="agregarProducto()">Agregar</button>
+      <button id="verCarritoBtn" onclick="irAlCarrito()" style="margin-top: 15px; display: none;">Ver Carrito 🛒</button>
     </div>
   </div>
 
@@ -174,6 +175,7 @@
       const cantidad = parseFloat(document.getElementById("cantidad").value);
       if (!cantidad || cantidad <= 0 || !productoSeleccionado) {
         alert("Verifica los datos");
+        actualizarBotonCarrito();
         return;
       }
 
@@ -193,6 +195,18 @@
       document.getElementById("buscador").value = "";
       document.getElementById("cantidad").value = "";
     }
+    function irAlCarrito() {
+  window.location.href = "pantalla3.html";
+}
+
+function actualizarBotonCarrito() {
+  const productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
+  document.getElementById("verCarritoBtn").style.display = productos.length > 0 ? "block" : "none";
+}
+
+// Mostrar botón si ya hay productos
+actualizarBotonCarrito();
+
   </script>
 </body>
 </html>
