@@ -96,6 +96,11 @@
 
     function mostrarCarrito() {
       contenedor.innerHTML = "";
+      if (productos.length === 0) {
+  contenedor.innerHTML = "<p>No hay productos en el carrito.</p>";
+  document.getElementById("continuarBtn").style.display = "none";
+  return;
+}
       productos.forEach((prod, index) => {
         const div = document.createElement("div");
         div.className = "producto";
@@ -127,7 +132,7 @@
     }
 
     function irAlResumen() {
-      window.location.href = "pantalla2.html";
+      window.location.href = "pantalla4.html";
     }
 
     mostrarCarrito();
