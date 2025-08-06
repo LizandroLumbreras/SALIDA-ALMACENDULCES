@@ -67,6 +67,7 @@
       border-radius: 6px;
       font-size: 16px;
       cursor: pointer;
+      margin-top: 10px;
     }
     button:hover {
       background-color: #b00000;
@@ -83,8 +84,8 @@
       <div id="codigo"></div>
       <input type="number" id="cantidad" placeholder="Cantidad a retirar">
       <button onclick="agregarProducto()">Agregar</button>
-      <button id="verCarritoBtn" onclick="irAlCarrito()" style="margin-top: 15px; display: none;">Ver Carrito 🛒</button>
     </div>
+    <button id="verCarritoBtn" onclick="irAlCarrito()" style="display: none;">Ver Carrito 🛒</button>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -103,37 +104,38 @@
 
     let productoSeleccionado = null;
 
-   document.getElementById("buscador").addEventListener("input", async function () {
-  const texto = this.value.trim().toLowerCase();
-  if (texto.length < 3) return;
+    document.getElementById("buscador").addEventListener("input", async function () {
+      const texto = this.value.trim().toLowerCase();
+      if (texto.length < 3) return;
 
-  const snapshot = await db.collection("productos").where("Departamento", "==", "3").get();
-  let encontrado = null;
+      const snapshot = await db.collection("productos").where("Departamento", "==", "3").get();
+      let encontrado = null;
 
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    const codigoBarra = (data["Codigo Barra"] || "").toString().padStart(13, '0');
-    const concepto = (data.Concepto || "").toLowerCase();
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const codigoBarra = (data["Codigo Barra"] || "").toString().padStart(13, '0');
+        const concepto = (data.Concepto || "").toLowerCase();
 
-    if (
-      codigoBarra.includes(texto.padStart(13, '0')) ||
-      concepto.includes(texto)
-    ) {
-      encontrado = { id: doc.id, ...data };
-    }
-  });
+        if (
+          codigoBarra.includes(texto.padStart(13, '0')) ||
+          concepto.includes(texto)
+        ) {
+          encontrado = { id: doc.id, ...data };
+        }
+      });
 
-  if (encontrado) {
-    productoSeleccionado = encontrado;
-    document.getElementById("descripcion").textContent = productoSeleccionado.Concepto || "Sin descripción";
-    document.getElementById("codigo").textContent = "Código: " + (productoSeleccionado["Codigo Barra"] || "");
-    document.getElementById("cantidad").value = "";
-    document.getElementById("infoProducto").style.display = "block";
-  } else {
-    document.getElementById("infoProducto").style.display = "none";
-    productoSeleccionado = null;
-  }
-});
+      if (encontrado) {
+        productoSeleccionado = encontrado;
+        document.getElementById("descripcion").textContent = productoSeleccionado.Concepto || "Sin descripción";
+        document.getElementById("codigo").textContent = "Código: " + (productoSeleccionado["Codigo Barra"] || "");
+        document.getElementById("cantidad").value = "";
+        document.getElementById("infoProducto").style.display = "block";
+      } else {
+        document.getElementById("infoProducto").style.display = "none";
+        productoSeleccionado = null;
+      }
+    });
+
     function agregarProducto() {
       const cantidad = parseFloat(document.getElementById("cantidad").value);
       if (!cantidad || cantidad <= 0 || !productoSeleccionado) {
@@ -145,7 +147,7 @@
       productos.push({
         id: productoSeleccionado.id,
         codigo: productoSeleccionado["Codigo Barra"],
-        descripcion: productoSeleccionado.Descripcion,
+        descripcion: productoSeleccionado.Concepto,
         cantidad: cantidad
       });
 
