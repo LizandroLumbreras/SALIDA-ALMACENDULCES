@@ -1,4 +1,4 @@
--<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -8,84 +8,100 @@
     body {
       font-family: Arial, sans-serif;
       background: linear-gradient(to right, #00416A, #E4E5E6);
-      margin: 0;
-      padding: 20px;
       color: white;
-      min-height: 100vh;
+      padding: 20px;
       box-sizing: border-box;
-      position: relative;
-    }
-    .marca-agua {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      opacity: 0.07;
-      z-index: 0;
-      max-width: 90%;
-      pointer-events: none;
     }
     .contenedor {
       max-width: 800px;
       margin: auto;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
+      background: rgba(255,255,255,0.1);
       padding: 20px;
-      z-index: 1;
-      position: relative;
+      border-radius: 10px;
     }
     h2 {
       text-align: center;
       margin-bottom: 20px;
     }
-    .producto {
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+    }
+    canvas {
+      background: white;
+      border: 1px solid #ccc;
+      width: 100%;
+      height: 150px;
+    }
+    table {
+      width: 100%;
+      margin-top: 15px;
       background: white;
       color: black;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      border-collapse: collapse;
     }
-    .producto button {
-      margin-top: 10px;
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    button {
       background-color: #e60000;
       color: white;
       border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .producto button:hover {
-      background-color: #b00000;
-    }
-    #guardarBtn {
-      display: block;
+      padding: 12px;
       width: 100%;
       margin-top: 20px;
-      background: #d32f2f;
-      color: white;
-      padding: 12px;
-      font-size: 16px;
-      border: none;
       border-radius: 6px;
+      font-size: 16px;
       cursor: pointer;
     }
-    #guardarBtn:hover {
-      background: #b71c1c;
+    button:hover {
+      background-color: #b00000;
     }
   </style>
 </head>
 <body>
-  <img src="logo_proveedora.webp" class="marca-agua" alt="Marca de agua">
   <div class="contenedor">
-    <h2>Resumen de productos agregados</h2>
-    <div id="listaResumen"></div>
-    <button id="guardarBtn" onclick="guardarSalida()">Guardar salida</button>
+    <h2>Resumen de salida - Dulces</h2>
+
+    <input type="date" id="fecha" />
+    <input type="text" id="entrega" placeholder="Quien entrega (ej. Arturo, Octaviano)" />
+    <input type="text" id="recibe" placeholder="Quien recibe" />
+    <input type="text" id="destino" placeholder="Destino" />
+
+    <h3>Productos</h3>
+    <table id="tablaProductos">
+      <thead>
+        <tr>
+          <th>Descripción</th>
+          <th>Código</th>
+          <th>Cantidad</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h3>Firma de quien entrega</h3>
+    <canvas id="firmaEntrega"></canvas>
+    <button onclick="limpiarFirma('firmaEntrega')">Limpiar firma entrega</button>
+
+    <h3>Firma de quien recibe</h3>
+    <canvas id="firmaRecibe"></canvas>
+    <button onclick="limpiarFirma('firmaRecibe')">Limpiar firma recibe</button>
+
+    <button onclick="guardarSalida()">Guardar salida</button>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
   <script>
+    // Inicializar Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
       authDomain: "inventariopv-643f1.firebaseapp.com",
@@ -94,77 +110,129 @@
       messagingSenderId: "96242533231",
       appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
-    const contenedor = document.getElementById("listaResumen");
+    // Mostrar productos
+    const productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
+    const tbody = document.querySelector("#tablaProductos tbody");
+    productos.forEach(p => {
+      const fila = document.createElement("tr");
+      fila.innerHTML = `
+        <td>${p.descripcion}</td>
+        <td>${p.codigo}</td>
+        <td>${p.cantidad}</td>
+      `;
+      tbody.appendChild(fila);
+    });
 
-    function mostrarResumen() {
-      contenedor.innerHTML = "";
-      productos.forEach((prod, index) => {
-        const div = document.createElement("div");
-        div.className = "producto";
-        div.innerHTML = `
-          <strong>${prod.descripcion}</strong><br>
-          Código: ${prod.codigo}<br>
-          Cantidad: ${prod.cantidad}<br>
-          <button onclick="eliminar(${index})">Eliminar</button>
-        `;
-        contenedor.appendChild(div);
+    // Firmas
+    function capturarFirma(idCanvas) {
+      const canvas = document.getElementById(idCanvas);
+      const ctx = canvas.getContext("2d");
+      let dibujando = false;
+
+      canvas.addEventListener("mousedown", () => dibujando = true);
+      canvas.addEventListener("mouseup", () => dibujando = false);
+      canvas.addEventListener("mouseleave", () => dibujando = false);
+      canvas.addEventListener("mousemove", e => {
+        if (!dibujando) return;
+        const rect = canvas.getBoundingClientRect();
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "black";
+        ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
       });
     }
 
-    function eliminar(index) {
-      productos.splice(index, 1);
-      localStorage.setItem("productosSeleccionados", JSON.stringify(productos));
-      mostrarResumen();
+    function limpiarFirma(idCanvas) {
+      const canvas = document.getElementById(idCanvas);
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    async function obtenerFolio() {
-      const ref = db.collection("consecutivos").doc("salidas_dulces");
-      const doc = await ref.get();
-      let actual = doc.exists ? doc.data().ultimo : 0;
-      actual++;
-      await ref.set({ ultimo: actual });
-      return actual;
-    }
+    capturarFirma("firmaEntrega");
+    capturarFirma("firmaRecibe");
 
+    // Guardar salida
     async function guardarSalida() {
-      if (productos.length === 0) {
-        alert("No hay productos para guardar");
+      const fecha = document.getElementById("fecha").value;
+      const entrega = document.getElementById("entrega").value;
+      const recibe = document.getElementById("recibe").value;
+      const destino = document.getElementById("destino").value;
+      if (!fecha || !entrega || !recibe || !destino || productos.length === 0) {
+        alert("Completa todos los campos y verifica los productos.");
         return;
       }
 
-      const folio = await obtenerFolio();
-      const fecha = localStorage.getItem("fecha") || new Date().toISOString();
-      const entrega = localStorage.getItem("entrega") || "";
-      const recibe = localStorage.getItem("recibe") || "";
-      const destino = localStorage.getItem("destino") || "";
+      const canvas1 = document.getElementById("firmaEntrega");
+      const canvas2 = document.getElementById("firmaRecibe");
+      const firmaEntrega = canvas1.toDataURL("image/png");
+      const firmaRecibe = canvas2.toDataURL("image/png");
 
-      const folioText = "SALDUL - " + String(folio).padStart(4, "0");
+      const folio = `SAL-${Date.now()}`;
 
-      const promesas = productos.map((p) => {
-        return db.collection("almacenes").doc("Almacen_Dulces").collection("salidas").add({
-          codigo: p.codigo,
-          descripcion: p.descripcion,
-          cantidad: p.cantidad,
-          fecha: fecha,
-          folio: folioText,
-          entrega: entrega,
-          recibe: recibe,
-          destino: destino
-        });
-      });
+      const salida = {
+        folio,
+        fecha,
+        entrega,
+        recibe,
+        destino,
+        productos,
+        firmaEntrega,
+        firmaRecibe,
+        timestamp: new Date()
+      };
 
-      await Promise.all(promesas);
-      alert("Salida guardada con folio: " + folioText);
+      await db.collection("almacenes").doc("Almacen_Dulces")
+              .collection("salidas").add(salida);
+
+      alert("Salida guardada con éxito.");
+      imprimirSalida(salida);
       localStorage.removeItem("productosSeleccionados");
-      window.location.href = "index.html";
+      window.location.href = "pantalla1.html"; // volver al inicio
     }
 
-    mostrarResumen();
+    function imprimirSalida(salida) {
+      const ventana = window.open("", "PRINT", "height=600,width=800");
+      ventana.document.write(`
+        <html>
+        <head><title>Resumen de salida</title></head>
+        <body>
+          <h2>Salida - Almacén Dulces</h2>
+          <p><strong>Folio:</strong> ${salida.folio}</p>
+          <p><strong>Fecha:</strong> ${salida.fecha}</p>
+          <p><strong>Entrega:</strong> ${salida.entrega}</p>
+          <p><strong>Recibe:</strong> ${salida.recibe}</p>
+          <p><strong>Destino:</strong> ${salida.destino}</p>
+          <table border="1" style="width:100%; margin-top:10px;">
+            <thead>
+              <tr><th>Descripción</th><th>Código</th><th>Cantidad</th></tr>
+            </thead>
+            <tbody>
+              ${salida.productos.map(p => `
+                <tr>
+                  <td>${p.descripcion}</td>
+                  <td>${p.codigo}</td>
+                  <td>${p.cantidad}</td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+          <h4>Firma entrega:</h4>
+          <img src="${salida.firmaEntrega}" width="300"/><br><br>
+          <h4>Firma recibe:</h4>
+          <img src="${salida.firmaRecibe}" width="300"/>
+        </body>
+        </html>
+      `);
+      ventana.document.close();
+      ventana.focus();
+      ventana.print();
+      ventana.close();
+    }
   </script>
 </body>
 </html>
