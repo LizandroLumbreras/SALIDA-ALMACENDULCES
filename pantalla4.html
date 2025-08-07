@@ -31,7 +31,8 @@
       touch-action: none;
       width: 100%;
       max-width: 500px;
-      height: 300px;
+      height: auto;
+      aspect-ratio: 5 / 3;
     }
 
     .botones {
@@ -85,12 +86,23 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
+    function ajustarResolucionCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+
+    ajustarResolucionCanvas();
+    window.addEventListener("resize", ajustarResolucionCanvas);
+
     let dibujando = false;
 
     function getPos(e) {
       const rect = canvas.getBoundingClientRect();
-      const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-      const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const x = (clientX - rect.left) * (canvas.width / rect.width);
+      const y = (clientY - rect.top) * (canvas.height / rect.height);
       return { x, y };
     }
 
@@ -127,13 +139,13 @@
       window.location.href = "pantalla5.html";
     }
 
-    // Eventos para mouse
+    // Eventos mouse
     canvas.addEventListener("mousedown", empezarDibujo);
     canvas.addEventListener("mouseup", terminarDibujo);
     canvas.addEventListener("mouseout", terminarDibujo);
     canvas.addEventListener("mousemove", dibujar);
 
-    // Eventos para touch
+    // Eventos touch
     canvas.addEventListener("touchstart", empezarDibujo, { passive: false });
     canvas.addEventListener("touchend", terminarDibujo);
     canvas.addEventListener("touchcancel", terminarDibujo);
