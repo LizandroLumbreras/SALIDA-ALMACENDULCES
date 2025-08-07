@@ -80,6 +80,40 @@
     #continuarBtn:hover {
       background: #b71c1c;
     }
+    .botones-acciones {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn {
+  flex: 1;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  color: white;
+}
+
+.btn.azul {
+  background-color: #1976D2;
+}
+
+.btn.azul:hover {
+  background-color: #1565C0;
+}
+
+.btn.rojo {
+  background-color: #d32f2f;
+}
+
+.btn.rojo:hover {
+  background-color: #b71c1c;
+}
   </style>
 </head>
 <body>
@@ -88,54 +122,42 @@
     <h2>Carrito de productos agregados</h2>
     <div id="listaCarrito"></div>
     <!-- NUEVA SECCIÓN DE BOTONES -->
-  <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
-    <button onclick="irAPantalla2()" style="
-      flex: 1;
-      background: #1976D2;
-      color: white;
-      padding: 12px;
-      font-size: 16px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    ">Agregar más artículos</button>
-
-    <button id="continuarBtn" onclick="irAlResumen()" style="
-      flex: 1;
-      background: #d32f2f;
-      color: white;
-      padding: 12px;
-      font-size: 16px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    ">Continuar a resumen</button>
-  </div>
+  <div class="botones-acciones">
+  <button id="agregarBtn" onclick="irAPantalla2()" class="btn azul">Agregar más artículos</button>
+  <button id="continuarBtn" onclick="irAlResumen()" class="btn rojo">Continuar a resumen</button>
 </div>
   <script>
     let productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
     const contenedor = document.getElementById("listaCarrito");
 
-    function mostrarCarrito() {
-      contenedor.innerHTML = "";
-      if (productos.length === 0) {
-  contenedor.innerHTML = "<p>No hay productos en el carrito.</p>";
-  document.getElementById("continuarBtn").style.display = "none";
-  return;
-}
-      productos.forEach((prod, index) => {
-        const div = document.createElement("div");
-        div.className = "producto";
-        div.innerHTML = `
-          <strong>${prod.descripcion}</strong><br>
-          Código: ${prod.codigo}<br>
-          Cantidad: <input type="number" value="${prod.cantidad}" onchange="actualizarCantidad(${index}, this.value)" />
-          <button onclick="eliminar(${index})">Eliminar</button>
-        `;
-        contenedor.appendChild(div);
-      });
-    }
+function mostrarCarrito() {
+  contenedor.innerHTML = "";
 
+  const continuarBtn = document.getElementById("continuarBtn");
+  const agregarBtn = document.getElementById("agregarBtn");
+
+  if (productos.length === 0) {
+    contenedor.innerHTML = "<p>No hay productos en el carrito.</p>";
+    continuarBtn.style.display = "none";
+    agregarBtn.style.display = "none";
+    return;
+  }
+
+  continuarBtn.style.display = "block";
+  agregarBtn.style.display = "block";
+
+  productos.forEach((prod, index) => {
+    const div = document.createElement("div");
+    div.className = "producto";
+    div.innerHTML = `
+      <strong>${prod.descripcion}</strong><br>
+      Código: ${prod.codigo}<br>
+      Cantidad: <input type="number" value="${prod.cantidad}" onchange="actualizarCantidad(${index}, this.value)" />
+      <button onclick="eliminar(${index})">Eliminar</button>
+    `;
+    contenedor.appendChild(div);
+  });
+}
     function actualizarCantidad(index, nuevaCantidad) {
       const cantidad = parseFloat(nuevaCantidad);
       if (!cantidad || cantidad <= 0) {
