@@ -87,9 +87,31 @@
   <div class="contenedor">
     <h2>Carrito de productos agregados</h2>
     <div id="listaCarrito"></div>
-    <button id="continuarBtn" onclick="irAlResumen()">Continuar a resumen</button>
-  </div>
+    <!-- NUEVA SECCIÓN DE BOTONES -->
+  <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
+    <button onclick="irAPantalla2()" style="
+      flex: 1;
+      background: #1976D2;
+      color: white;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    ">Agregar más artículos</button>
 
+    <button id="continuarBtn" onclick="irAlResumen()" style="
+      flex: 1;
+      background: #d32f2f;
+      color: white;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    ">Continuar a resumen</button>
+  </div>
+</div>
   <script>
     let productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
     const contenedor = document.getElementById("listaCarrito");
@@ -136,6 +158,9 @@
     }
 
     mostrarCarrito();
+    function irAPantalla2() {
+  window.location.href = "pantalla2.html"; // Ajusta si tu archivo tiene otro nombre
+}
   </script>
 </body>
 </html>
