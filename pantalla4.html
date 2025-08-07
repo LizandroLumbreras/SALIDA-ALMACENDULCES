@@ -13,14 +13,36 @@
       text-align: center;
       color: white;
     }
-    canvas {
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    .canvas-container {
+      display: flex;
+      justify-content: center;
       margin-top: 20px;
     }
-    .btn {
+
+    canvas {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      touch-action: none;
+      width: 100%;
+      max-width: 500px;
+      height: 300px;
+    }
+
+    .botones {
       margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
       padding: 12px 20px;
       font-size: 16px;
       font-weight: bold;
@@ -28,42 +50,71 @@
       border-radius: 8px;
       cursor: pointer;
       color: white;
+      min-width: 160px;
     }
+
     .limpiar {
       background-color: #1976D2;
     }
+
+    .limpiar:hover {
+      background-color: #1565C0;
+    }
+
     .continuar {
       background-color: #d32f2f;
+    }
+
+    .continuar:hover {
+      background-color: #b71c1c;
     }
   </style>
 </head>
 <body>
   <h2>Firma de quien entrega</h2>
-  <canvas id="canvas" width="300" height="200"></canvas>
-  <br>
-  <button class="btn limpiar" onclick="limpiarFirma()">Limpiar firma</button>
-  <button class="btn continuar" onclick="guardarFirma()">Continuar</button>
+  <div class="canvas-container">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div class="botones">
+    <button class="btn limpiar" onclick="limpiarFirma()">Limpiar firma</button>
+    <button class="btn continuar" onclick="guardarFirma()">Continuar</button>
+  </div>
 
   <script>
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
+
     let dibujando = false;
 
-    canvas.addEventListener("mousedown", () => dibujando = true);
-    canvas.addEventListener("mouseup", () => dibujando = false);
-    canvas.addEventListener("mouseleave", () => dibujando = false);
-    canvas.addEventListener("mousemove", dibujar);
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+      return { x, y };
+    }
+
+    function empezarDibujo(e) {
+      dibujando = true;
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    }
+
+    function terminarDibujo() {
+      dibujando = false;
+      ctx.beginPath();
+    }
 
     function dibujar(e) {
       if (!dibujando) return;
-      const rect = canvas.getBoundingClientRect();
+      e.preventDefault();
+      const pos = getPos(e);
       ctx.lineWidth = 2;
       ctx.lineCap = "round";
       ctx.strokeStyle = "#000";
-      ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+      ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
     }
 
     function limpiarFirma() {
@@ -71,10 +122,22 @@
     }
 
     function guardarFirma() {
-      const firmaEntrega = canvas.toDataURL();
-      localStorage.setItem("firmaEntrega", firmaEntrega);
-      window.location.href = "pantalla5.html"; // siguiente firma
+      const firma = canvas.toDataURL("image/png");
+      localStorage.setItem("firmaEntrega", firma);
+      window.location.href = "pantalla5.html";
     }
+
+    // Eventos para mouse
+    canvas.addEventListener("mousedown", empezarDibujo);
+    canvas.addEventListener("mouseup", terminarDibujo);
+    canvas.addEventListener("mouseout", terminarDibujo);
+    canvas.addEventListener("mousemove", dibujar);
+
+    // Eventos para touch
+    canvas.addEventListener("touchstart", empezarDibujo, { passive: false });
+    canvas.addEventListener("touchend", terminarDibujo);
+    canvas.addEventListener("touchcancel", terminarDibujo);
+    canvas.addEventListener("touchmove", dibujar, { passive: false });
   </script>
 </body>
 </html>
