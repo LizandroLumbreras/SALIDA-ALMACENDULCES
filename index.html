@@ -184,9 +184,10 @@
         return;
       }
 
-      localStorage.setItem("entrega", entrega);
-      localStorage.setItem("recibe", recibe);
-      localStorage.setItem("destino", destino);
+     localStorage.setItem("entrega", entrega);
+localStorage.setItem("recibe", recibe);
+localStorage.setItem("destino", destino);
+localStorage.setItem("fecha", new Date().toLocaleString("es-MX"));
       window.location.href = "pantalla2.html";
     }
 
