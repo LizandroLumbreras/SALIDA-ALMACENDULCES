@@ -145,11 +145,12 @@
 
       const productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
       productos.push({
-        id: productoSeleccionado.id,
-        codigo: productoSeleccionado["Codigo Barra"],
-        descripcion: productoSeleccionado.Concepto,
-        cantidad: cantidad
-      });
+  id: productoSeleccionado.id,
+  codigo: productoSeleccionado["Codigo Barra"],
+  descripcion: productoSeleccionado.Concepto,
+  unidad: productoSeleccionado.Unidad || "N/D", // nuevo campo agregado
+  cantidad: cantidad
+});
 
       localStorage.setItem("productosSeleccionados", JSON.stringify(productos));
 
