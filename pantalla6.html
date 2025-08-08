@@ -19,7 +19,8 @@
   </style>
 </head>
 <body>
-  <div class="contenedor">
+  <!-- IMPORTANTE: id para capturar el PDF -->
+  <div class="contenedor" id="resumenSalida">
     <h2>Resumen de Salida - Dulces</h2>
     <p><strong>Folio:</strong> <span id="folio"></span></p>
     <p><strong>Fecha y Hora:</strong> <span id="fecha"></span></p>
@@ -48,12 +49,17 @@
         <img id="firmaRecibe" alt="Firma recibe">
       </div>
     </div>
-
-    <button class="btn-imprimir" onclick="guardarEImprimir()">Imprimir y guardar salida</button>
   </div>
 
+  <button class="btn-imprimir" id="btnGuardarImprimir">Imprimir y guardar salida</button>
+
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <!-- Librerías para generar PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <script>
     // Firebase
     const firebaseConfig = {
@@ -98,19 +104,25 @@
       tabla.appendChild(row);
     });
 
-    // Guardar en Firestore y luego imprimir
-    async function guardarEImprimir() {
-    if (!productos || productos.length === 0) {
-      alert("No hay productos en el resumen.");
-      return;
-    }
-
-    const data = {
-      folio, fecha, entrega, recibe, destino, productos, firmaEntrega, firmaRecibe,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    // Limpieza y regreso al inicio
+    const irAlInicio = () => {
+      localStorage.removeItem("productosSeleccionados");
+      localStorage.removeItem("firmaEntrega");
+      localStorage.removeItem("firmaRecibe");
+      localStorage.removeItem("entrega");
+      localStorage.removeItem("recibe");
+      localStorage.removeItem("destino");
+      // Nota: el index vuelve a escribir "folio" y "fecha"
+      window.location.href = "index.html";
     };
 
-    try {
+    // Guarda en Firestore
+    async function guardarSalida() {
+      const data = {
+        folio, fecha, entrega, recibe, destino, productos, firmaEntrega, firmaRecibe,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
       // 1) Guardar salida
       await db.collection("almacenes")
         .doc("Almacen_Dulces")
@@ -125,37 +137,73 @@
       } else {
         await folioDoc.set({ ultimo: 2 });
       }
-
-      // 3) Preparar redirección al cerrar el diálogo de impresión
-      const irAlInicio = () => {
-        // Limpieza opcional del flujo anterior
-        localStorage.removeItem("productosSeleccionados");
-        localStorage.removeItem("firmaEntrega");
-        localStorage.removeItem("firmaRecibe");
-        localStorage.removeItem("entrega");
-        localStorage.removeItem("recibe");
-        localStorage.removeItem("destino");
-        // Nota: el index vuelve a escribir "folio" y "fecha"
-        window.location.href = "index.html";
-      };
-
-      // Redirige al terminar de imprimir (mejor soporte cross-browser)
-      if ("onafterprint" in window) {
-        window.onafterprint = irAlInicio;
-      }
-      // Fallback por si el navegador no dispara onafterprint
-      setTimeout(irAlInicio, 60000); // 60s de seguridad
-
-      // 4) Imprimir
-      window.print();
-
-    } catch (e) {
-      alert("Error al guardar: " + e.message);
     }
-  }
 
-  // Exponer función al botón
-  window.guardarEImprimir = guardarEImprimir;
+    // Genera y descarga PDF del resumen
+    async function descargarPDF() {
+      const { jsPDF } = window.jspdf;
+      const resumen = document.getElementById('resumenSalida');
+
+      // Asegura que las firmas estén cargadas
+      await Promise.all([
+        new Promise(r => { if (document.getElementById('firmaEntrega').complete) r(); else document.getElementById('firmaEntrega').onload = r; }),
+        new Promise(r => { if (document.getElementById('firmaRecibe').complete) r(); else document.getElementById('firmaRecibe').onload = r; })
+      ]);
+
+      const canvas = await html2canvas(resumen, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 10;
+      const imgWidth = pageWidth - margin * 2;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let y = margin;
+      // Si no cabe en una página, dividir en múltiples (sencillo)
+      if (imgHeight <= pdf.internal.pageSize.getHeight() - margin * 2) {
+        pdf.addImage(imgData, 'PNG', margin, y, imgWidth, imgHeight);
+      } else {
+        // Troceo básico vertical
+        const pageHeightPx = (pdf.internal.pageSize.getHeight() - margin * 2) * (canvas.width / imgWidth);
+        let sY = 0;
+        while (sY < canvas.height) {
+          const pageCanvas = document.createElement('canvas');
+          const pageCtx = pageCanvas.getContext('2d');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = Math.min(pageHeightPx, canvas.height - sY);
+          pageCtx.drawImage(canvas, 0, sY, canvas.width, pageCanvas.height, 0, 0, canvas.width, pageCanvas.height);
+          const pageImg = pageCanvas.toDataURL('image/png');
+          if (sY > 0) pdf.addPage();
+          pdf.addImage(pageImg, 'PNG', margin, margin, imgWidth, (pageCanvas.height * imgWidth) / canvas.width);
+          sY += pageHeightPx;
+        }
+      }
+
+      const nombre = `Comprobante_${(folio || 'SALDUL').replace(/\s+/g,'_')}.pdf`;
+      pdf.save(nombre);
+    }
+
+    async function guardarEImprimir() {
+      if (!productos || productos.length === 0) {
+        alert("No hay productos en el resumen.");
+        return;
+      }
+
+      try {
+        await guardarSalida();          // Guardar en Firestore
+        await descargarPDF();           // Descargar comprobante
+        if ("onafterprint" in window) {
+          window.onafterprint = irAlInicio;
+        }
+        setTimeout(irAlInicio, 60000);  // Fallback 60s
+        window.print();                 // Imprimir
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    }
+
+    document.getElementById('btnGuardarImprimir').addEventListener('click', guardarEImprimir);
   </script>
 </body>
 </html>
