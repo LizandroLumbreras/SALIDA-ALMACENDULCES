@@ -6,11 +6,12 @@
   <title>Resumen Final</title>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
   <style>
     body {
-      font-family: 'Courier New', monospace;
-      background: #f2f2f2;
-      padding: 10px;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to right, #00416A, #E4E5E6);
+      padding: 20px;
       margin: 0;
       color: black;
     }
@@ -19,13 +20,22 @@
       background: white;
       width: 300px;
       margin: auto;
-      padding: 10px;
-      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
     }
 
     h2 {
       text-align: center;
-      margin: 5px 0;
+      margin-bottom: 5px;
+      color: #00416A;
+    }
+
+    .folio {
+      text-align: center;
+      font-weight: bold;
+      font-size: 16px;
+      margin: 10px 0;
     }
 
     .linea {
@@ -34,8 +44,8 @@
     }
 
     .producto {
-      font-size: 14px;
-      margin-bottom: 5px;
+      font-size: 13px;
+      margin-bottom: 6px;
     }
 
     .firmas {
@@ -56,14 +66,14 @@
     }
 
     .boton-imprimir {
-      margin: 20px auto;
+      margin: 25px auto;
       display: block;
       background: #00416A;
       color: white;
       border: none;
       padding: 10px 20px;
       font-weight: bold;
-      border-radius: 5px;
+      border-radius: 6px;
       cursor: pointer;
     }
 
@@ -79,6 +89,7 @@
       .ticket {
         border: none;
         width: 100%;
+        box-shadow: none;
       }
 
       .firmas img {
@@ -90,6 +101,7 @@
 <body>
   <div class="ticket" id="ticket">
     <h2>La Proveedora</h2>
+    <p class="folio" id="folio">Folio: #...</p>
     <p style="text-align: center;">Salida de productos</p>
     <div class="linea"></div>
     <div id="listaProductos"></div>
@@ -135,7 +147,14 @@
     const db = getFirestore(app);
 
     const listaProductos = document.getElementById("listaProductos");
+    const folioVisual = document.getElementById("folio");
+
     const productos = JSON.parse(localStorage.getItem("productosSeleccionados") || "[]");
+    const firmaEntrega = localStorage.getItem("firmaEntrega");
+    const firmaRecibe = localStorage.getItem("firmaRecibe");
+
+    document.getElementById("firmaEntrega").src = firmaEntrega || "";
+    document.getElementById("firmaRecibe").src = firmaRecibe || "";
 
     if (productos.length === 0) {
       listaProductos.innerHTML = "<p>No hay productos en el resumen.</p>";
@@ -144,22 +163,20 @@
         const div = document.createElement("div");
         div.className = "producto";
         div.innerHTML = `
-          ${p.descripcion}<br>
+          <strong>${p.descripcion}</strong><br>
           Cód: ${p.codigo} | Cant: ${p.cantidad}
         `;
         listaProductos.appendChild(div);
       });
     }
 
-    document.getElementById("firmaEntrega").src = localStorage.getItem("firmaEntrega") || "";
-    document.getElementById("firmaRecibe").src = localStorage.getItem("firmaRecibe") || "";
+    let guardado = false;
 
     async function guardarYImprimir() {
-      const fecha = new Date().toLocaleString("es-MX");
-      const firmaEntrega = localStorage.getItem("firmaEntrega");
-      const firmaRecibe = localStorage.getItem("firmaRecibe");
+      if (guardado) return window.print(); // ya fue guardado antes
 
-      // Obtener o crear folio en: consecutivos/Almacen_Dulces
+      const fecha = new Date().toLocaleString("es-MX");
+
       const folioRef = doc(db, "consecutivos", "Almacen_Dulces");
       const folioSnap = await getDoc(folioRef);
 
@@ -171,15 +188,26 @@
         await setDoc(folioRef, { ultimo: 1 });
       }
 
+      // Mostrar visualmente el folio
+      folioVisual.textContent = `Folio: #${nuevoFolio}`;
+
       const salida = {
         folio: nuevoFolio,
         fecha: fecha,
-        productos: productos,
+        productos,
         firmaEntrega,
         firmaRecibe
       };
 
       await addDoc(collection(db, "almacenes", "Almacen_Dulces", "salidas"), salida);
+
+      guardado = true;
+
+      // Limpia almacenamiento local si deseas
+      localStorage.removeItem("productosSeleccionados");
+      localStorage.removeItem("firmaEntrega");
+      localStorage.removeItem("firmaRecibe");
+
       window.print();
     }
   </script>
