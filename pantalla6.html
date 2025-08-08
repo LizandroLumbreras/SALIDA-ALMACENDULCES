@@ -2,16 +2,18 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Resumen Final - Salida Dulces</title>
+  <title>Resumen de salida</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
       font-family: 'Courier New', monospace;
       background: linear-gradient(to right, #00416A, #E4E5E6);
-      color: black;
       margin: 0;
-      padding: 20px;
+      padding: 40px 20px;
+      color: black;
       text-align: center;
+      box-sizing: border-box;
+      position: relative;
     }
 
     .marca-agua {
@@ -21,17 +23,17 @@
       transform: translate(-50%, -50%);
       opacity: 0.07;
       z-index: 0;
-      max-width: 90%;
+      max-width: 85%;
       pointer-events: none;
     }
 
     .ticket {
       background: white;
+      border-radius: 10px;
       padding: 20px;
-      border-radius: 8px;
       margin: auto;
-      max-width: 380px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      max-width: 480px;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
       position: relative;
       z-index: 2;
     }
@@ -40,57 +42,77 @@
       margin: 0 0 10px;
     }
 
-    .firma {
-      max-width: 100px;
-      height: auto;
-      margin: 10px auto;
+    .ticket p {
+      margin: 5px 0;
     }
 
-    .label {
-      font-size: 12px;
-      margin-top: -5px;
+    .productos {
+      text-align: left;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    .firmas {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+    }
+
+    .firmas div {
+      text-align: center;
+    }
+
+    .firmas img {
+      max-width: 120px;
+      height: auto;
+      border: 1px solid #ccc;
+      background: #f0f0f0;
+      padding: 5px;
     }
 
     button {
       margin-top: 20px;
-      padding: 10px 20px;
       background-color: #00416A;
       color: white;
       border: none;
-      border-radius: 6px;
-      cursor: pointer;
+      padding: 12px 24px;
+      border-radius: 8px;
       font-size: 16px;
+      cursor: pointer;
     }
 
     button:hover {
-      background-color: #022f4d;
-    }
-
-    hr {
-      border: none;
-      border-top: 1px dashed black;
-      margin: 10px 0;
+      background-color: #002f4b;
     }
   </style>
 </head>
 <body>
-  <img src="logo_proveedora.webp" class="marca-agua" alt="Marca de agua" />
-
-  <div class="ticket" id="resumen">
+  <img src="logo_proveedora.webp" class="marca-agua" alt="Marca de Agua">
+  <div class="ticket" id="ticket">
     <h2>La Proveedora</h2>
     <p>Salida de productos</p>
     <hr />
-    <div id="info"></div>
+    <p><strong>Fecha:</strong> <span id="fecha"></span></p>
+    <p><strong>Destino:</strong> <span id="destino"></span></p>
+    <p><strong>Origen:</strong> Almacen_Dulces</p>
+    <p><strong>Entrega:</strong> <span id="entrega"></span></p>
+    <p><strong>Recibe:</strong> <span id="recibe"></span></p>
+    <p><strong>Folio:</strong> <span id="folio"></span></p>
     <hr />
-    <div id="productos"></div>
+    <div class="productos" id="productos"></div>
     <hr />
-    <img id="firmaEntrega" class="firma" />
-    <div class="label">Entrega</div>
-    <img id="firmaRecibe" class="firma" />
-    <div class="label">Recibe</div>
+    <div class="firmas">
+      <div>
+        <img id="firmaEntrega" alt="Firma Entrega" />
+        <p>Entrega</p>
+      </div>
+      <div>
+        <img id="firmaRecibe" alt="Firma Recibe" />
+        <p>Recibe</p>
+      </div>
+    </div>
   </div>
-
-  <button onclick="guardarEImprimir()">Imprimir ticket</button>
+  <button onclick="guardarYImprimir()">Imprimir ticket</button>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -100,86 +122,62 @@
       apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
       authDomain: "inventariopv-643f1.firebaseapp.com",
       projectId: "inventariopv-643f1",
-      storageBucket: "inventariopv-643f1.appspot.com",
-      messagingSenderId: "96242533231",
-      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Cargar datos del resumen
     const entrega = localStorage.getItem("entrega");
     const recibe = localStorage.getItem("recibe");
     const destino = localStorage.getItem("destino");
-    const fecha = localStorage.getItem("fecha");
     const productos = JSON.parse(localStorage.getItem("productos") || "[]");
     const firmaEntrega = localStorage.getItem("firmaEntrega");
     const firmaRecibe = localStorage.getItem("firmaRecibe");
-    let folio = "";
 
+    document.getElementById("entrega").textContent = entrega;
+    document.getElementById("recibe").textContent = recibe;
+    document.getElementById("destino").textContent = destino;
     document.getElementById("firmaEntrega").src = firmaEntrega;
     document.getElementById("firmaRecibe").src = firmaRecibe;
 
-    function mostrarResumen() {
-      const ahora = new Date();
-      const hora = ahora.toLocaleTimeString();
-      const hoy = ahora.toLocaleDateString();
+    const fechaActual = new Date();
+    document.getElementById("fecha").textContent = fechaActual.toLocaleString();
 
-      const infoDiv = document.getElementById("info");
-      infoDiv.innerHTML = `
-        <strong>Fecha:</strong> ${fecha} ${hora}<br>
-        <strong>Destino:</strong> ${destino}<br>
-        <strong>Origen:</strong> Almacen_Dulces<br>
-        <strong>Entrega:</strong> ${entrega}<br>
-        <strong>Recibe:</strong> ${recibe}<br>
-        <strong>Folio:</strong> <span id="folio">Cargando...</span>
-      `;
+    const productosDiv = document.getElementById("productos");
+    productos.forEach(p => {
+      productosDiv.innerHTML += `<p>${p.descripcion}<br>Cód: ${p.codigo} | Cant: ${p.cantidad}</p>`;
+    });
 
-      const productosDiv = document.getElementById("productos");
-      productosDiv.innerHTML = productos.map(p => `
-        ${p.descripcion}<br>
-        Cód: ${p.codigo} | Cant: ${p.cantidad}<br><br>
-      `).join('');
-    }
-
-    async function guardarEImprimir() {
-      try {
-        // Obtener folio actual
-        const docRef = db.collection("consecutivos").doc("salidas_dulces");
-        const docSnap = await docRef.get();
-        let numero = docSnap.exists ? docSnap.data().ultimo + 1 : 1;
-
-        folio = "SALDUL - " + String(numero).padStart(4, "0");
-        document.getElementById("folio").textContent = folio;
-
-        // Guardar salida
-        await db.collection("almacenes").doc("Almacen_Dulces")
-          .collection("salidas")
-          .add({
-            fecha: new Date().toISOString(),
-            fecha_hora_legible: new Date().toLocaleString(),
-            entrega,
-            recibe,
-            destino,
-            productos,
-            firmaEntrega,
-            firmaRecibe,
-            folio
-          });
-
-        // Actualizar consecutivo
-        await docRef.set({ ultimo: numero });
-
-        // Imprimir
-        setTimeout(() => {
-          window.print();
-        }, 300);
-      } catch (error) {
-        alert("Error al guardar la salida: " + error.message);
+    async function guardarYImprimir() {
+      const docRef = db.collection("consecutivos").doc("salidas_dulces");
+      const docSnap = await docRef.get();
+      let numero = 1;
+      if (docSnap.exists) {
+        numero = (docSnap.data().ultimo || 0) + 1;
       }
-    }
+      const folio = "SALDUL - " + String(numero).padStart(4, "0");
+      document.getElementById("folio").textContent = folio;
 
-    mostrarResumen();
+      // Actualizar consecutivo
+      await docRef.set({ ultimo: numero });
+
+      // Guardar en colección
+      const salida = {
+        folio,
+        fecha: firebase.firestore.Timestamp.fromDate(fechaActual),
+        entrega,
+        recibe,
+        destino,
+        origen: "Almacen_Dulces",
+        productos,
+        firmaEntrega,
+        firmaRecibe
+      };
+      await db.collection("almacenes").doc("Almacen_Dulces").collection("salidas").add(salida);
+
+      // Imprimir
+      window.print();
+    }
   </script>
 </body>
 </html>
+
