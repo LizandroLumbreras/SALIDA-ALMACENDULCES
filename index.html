@@ -5,87 +5,16 @@
   <title>Registrar salida - Dulces</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to right, #00416A, #E4E5E6);
-      padding: 20px;
-      margin: 0;
-      color: white;
-      min-height: 100vh;
-      box-sizing: border-box;
-      position: relative;
-    }
-
-    input[list], select, input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 20px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: none;
-      box-sizing: border-box;
-    }
-
-    .marca-agua {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      opacity: 0.20;
-      z-index: 0;
-      max-width: 80%;
-      pointer-events: none;
-    }
-
-    .contenedor {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-      padding: 30px;
-      max-width: 600px;
-      margin: auto;
-      position: relative;
-      z-index: 2;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-    }
-
-    select, input[type="date"] {
-      color: black;
-    }
-
-    .boton {
-      background-color: #d32f2f;
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      font-size: 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      width: 100%;
-    }
-
-    .boton:hover {
-      background-color: #b71c1c;
-    }
-
-    .folio {
-      margin-bottom: 20px;
-      font-weight: bold;
-    }
-
-    .descargar-manual {
-      display: block;
-      margin-top: 20px;
-      text-align: center;
-      padding: 12px 20px;
-      background: #00416A;
-      color: white;
-      border-radius: 6px;
-      text-decoration: none;
-    }
+    body{font-family:Arial,sans-serif;background:linear-gradient(to right,#00416A,#E4E5E6);padding:20px;margin:0;color:white;min-height:100vh;box-sizing:border-box;position:relative}
+    input[list],select,input[type="text"]{width:100%;padding:10px;margin-bottom:20px;font-size:16px;border-radius:6px;border:none;box-sizing:border-box}
+    .marca-agua{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);opacity:.20;z-index:0;max-width:80%;pointer-events:none}
+    .contenedor{background:rgba(255,255,255,.1);border-radius:10px;padding:30px;max-width:600px;margin:auto;position:relative;z-index:2}
+    label{display:block;margin-bottom:8px}
+    select,input[type="date"]{color:black}
+    .boton{background-color:#d32f2f;color:white;border:none;padding:12px 20px;font-size:16px;border-radius:6px;cursor:pointer;width:100%}
+    .boton:hover{background-color:#b71c1c}
+    .folio{margin-bottom:20px;font-weight:bold}
+    .descargar-manual{display:block;margin-top:20px;text-align:center;padding:12px 20px;background:#00416A;color:white;border-radius:6px;text-decoration:none}
   </style>
 </head>
 <body>
@@ -134,14 +63,13 @@
     </datalist>
 
     <button class="boton" onclick="continuar()">Continuar</button>
-    <a href="Manual_Salida_Dulces.pdf" download class="descargar-manual">
-      📄 Descargar Manual de Uso
-    </a>
+    <a href="Manual_Salida_Dulces.pdf" download class="descargar-manual">📄 Descargar Manual de Uso</a>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script>
+    // Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
       authDomain: "inventariopv-643f1.firebaseapp.com",
@@ -157,11 +85,12 @@
       const docRef = db.collection("consecutivos").doc("salidas_dulces");
       const docSnap = await docRef.get();
       let numero = 1;
-      if (docSnap.exists) {
-        numero = docSnap.data().ultimo || 1;
-      }
+      if (docSnap.exists) numero = docSnap.data().ultimo || 1;
+
       const folioFinal = "SALDUL - " + String(numero).padStart(4, "0");
       document.getElementById("proximoFolio").textContent = folioFinal;
+      // Guarda el folio para el resumen
+      localStorage.setItem("folio", folioFinal);
     }
 
     function ponerFechaHoy() {
@@ -169,14 +98,17 @@
       const yyyy = hoy.getFullYear();
       const mm = String(hoy.getMonth() + 1).padStart(2, '0');
       const dd = String(hoy.getDate()).padStart(2, '0');
-      const fecha = `${yyyy}-${mm}-${dd}`;
-      document.getElementById("fecha").value = fecha;
-      localStorage.setItem("fecha", fecha);
+      const fechaInput = `${yyyy}-${mm}-${dd}`;
+      document.getElementById("fecha").value = fechaInput;
+
+      // Guardamos una fecha legible para el resumen
+      const fechaLegible = new Date().toLocaleString("es-MX");
+      localStorage.setItem("fecha", fechaLegible);
     }
 
     function continuar() {
       const entrega = document.getElementById("entrega").value;
-      const recibe = document.getElementById("recibe").value;
+      const recibe  = document.getElementById("recibe").value;
       const destino = document.getElementById("destino").value;
 
       if (!entrega || !recibe || !destino) {
@@ -184,10 +116,11 @@
         return;
       }
 
-     localStorage.setItem("entrega", entrega);
-localStorage.setItem("recibe", recibe);
-localStorage.setItem("destino", destino);
-localStorage.setItem("fecha", new Date().toLocaleString("es-MX"));
+      localStorage.setItem("entrega", entrega);
+      localStorage.setItem("recibe",  recibe);
+      localStorage.setItem("destino", destino);
+      // NO volver a guardar 'fecha' aquí para no pisarla con otro formato
+
       window.location.href = "pantalla2.html";
     }
 
