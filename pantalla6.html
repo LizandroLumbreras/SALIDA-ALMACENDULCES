@@ -33,7 +33,6 @@
           <th>Código</th>
           <th>Descripción</th>
           <th>Cantidad</th>
-          <th>Unidad</th>
         </tr>
       </thead>
       <tbody id="tabla-productos"></tbody>
@@ -95,7 +94,6 @@
         <td>${p.codigo || ''}</td>
         <td>${p.descripcion || ''}</td>
         <td>${p.cantidad || 0}</td>
-        <td>${p.unidad || 'N/D'}</td>
       `;
       tabla.appendChild(row);
     });
