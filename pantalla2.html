@@ -100,24 +100,22 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // ===== Config búsqueda =====
+    const DEPTS_DULCES = ["DULCESIEPS", "CHICLEGRAVADO", "DULCESEXENTOS"];
+
     // ===== Estado =====
     let productoSeleccionado = null;
 
-    // ===== Utiles =====
+    // ===== Utils =====
     const pad13 = (s) => String(s).replace(/\s+/g,'').padStart(13,'0');
-    const normalizaCodigo = (s) => String(s).trim().replace(/\s+/g, '');
+    const normCod = (s) => String(s).trim().replace(/\s+/g, '');
     const toUpper = (s) => String(s||'').toUpperCase();
 
-    function esDulces(dep) {
-      if (dep == null) return false;
-      const v = String(dep).toLowerCase();
-      return v === '3' || v.includes('dulc');
-    }
     function esValido(d) {
       if (!d) return false;
-      if (d.activo === false) return false;  // 👈 solo activos
-      if (!esDulces(d.departamento)) return false; // 👈 solo dulces
-      return true;
+      if (d.activo === false) return false; // solo activos
+      const dep = String(d.departamento || "").toUpperCase();
+      return DEPTS_DULCES.includes(dep);
     }
 
     // ===== Render =====
@@ -144,62 +142,95 @@
       if (texto.length < 2) { ocultarProducto(); return; }
 
       try {
-        const tCod = normalizaCodigo(texto);
+        const tCod = normCod(texto);
+
+        // ---------- 1) BÚSQUEDA POR CÓDIGO ----------
         if (/^\d+$/.test(tCod)) {
-          // buscar por docId
+          // a) Por docId (no se puede filtrar server-side, validamos después)
           const byId = await db.collection('productos').doc(tCod).get();
           if (byId.exists && esValido(byId.data())) {
             mostrarProducto({ id: byId.id, ...byId.data() });
             return;
           }
-          // buscar por campo codigoBarra
+
+          // b) Por campo codigoBarra (con filtros en servidor)
           const v1 = tCod;
           const v2 = pad13(tCod);
-          let q = await db.collection('productos').where('codigoBarra','==',v1).limit(1).get();
-          if (q.empty && v2!==v1) {
-            q = await db.collection('productos').where('codigoBarra','==',v2).limit(1).get();
+
+          let q = await db.collection('productos')
+            .where('activo','==', true)
+            .where('departamento','in', DEPTS_DULCES)
+            .where('codigoBarra','==', v1)
+            .limit(1).get();
+
+          if (q.empty && v2 !== v1) {
+            q = await db.collection('productos')
+              .where('activo','==', true)
+              .where('departamento','in', DEPTS_DULCES)
+              .where('codigoBarra','==', v2)
+              .limit(1).get();
           }
+
           if (!q.empty) {
             const doc = q.docs[0]; const d = doc.data();
-            if (esValido(d)) { mostrarProducto({id:doc.id, ...d}); return; }
+            mostrarProducto({ id: doc.id, ...d });
+            return;
           }
         }
 
-        // búsqueda por nombre (prefijo, mayúsculas)
+        // ---------- 2) BÚSQUEDA POR NOMBRE (prefijo) ----------
         const pref = toUpper(texto);
         const q2 = await db.collection('productos')
-          .where('concepto','>=',pref)
-          .where('concepto','<=',pref+'\uf8ff')
+          .where('activo','==', true)
+          .where('departamento','in', DEPTS_DULCES)
+          .where('concepto','>=', pref)
+          .where('concepto','<=', pref + '\uf8ff')
           .limit(20).get();
 
-        let docOk = null;
-        q2.forEach(doc => { const d=doc.data(); if (!docOk && esValido(d)) docOk={id:doc.id,...d}; });
-        if (!docOk && !q2.empty) {
-          const d=q2.docs[0].data();
-          if (esValido(d)) docOk={id:q2.docs[0].id,...d};
+        if (!q2.empty) {
+          const doc = q2.docs[0];
+          mostrarProducto({ id: doc.id, ...doc.data() });
+        } else {
+          ocultarProducto();
         }
-
-        if (docOk) mostrarProducto(docOk); else ocultarProducto();
-      } catch(e){ console.error(e); ocultarProducto(); }
+      } catch(e){
+        // Si Firestore pide índice compuesto, mostrará el link en consola
+        console.error('[ERROR búsqueda]', e);
+        ocultarProducto();
+      }
     });
 
     // ===== Agregar al carrito =====
     document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
     function agregarProducto() {
       const cantidad = parseFloat(document.getElementById('cantidad').value);
-      if (!cantidad || cantidad<=0 || !productoSeleccionado) { alert('Verifica los datos'); return; }
+      if (!cantidad || cantidad <= 0 || !productoSeleccionado) {
+        alert('Verifica los datos');
+        return;
+      }
       const d = productoSeleccionado;
       const unidad = d.unidadMedidaSat || d.unidad || d.uMedida || 'N/D';
-      const productos = JSON.parse(localStorage.getItem('productosSeleccionados')||'[]');
-      productos.push({ id:d.id, codigo:d.codigoBarra||d.id||'', descripcion:d.concepto||'Sin descripción', unidad:unidad, cantidad:cantidad });
+
+      const productos = JSON.parse(localStorage.getItem('productosSeleccionados') || '[]');
+      productos.push({
+        id: d.id,
+        codigo: d.codigoBarra || d.id || '',
+        descripcion: d.concepto || 'Sin descripción',
+        unidad: unidad,
+        cantidad: cantidad
+      });
       localStorage.setItem('productosSeleccionados', JSON.stringify(productos));
-      ocultarProducto(); document.getElementById('buscador').value=''; document.getElementById('cantidad').value='';
+
+      ocultarProducto();
+      document.getElementById('buscador').value = '';
+      document.getElementById('cantidad').value = '';
       actualizarBotonCarrito();
     }
 
     function irAlCarrito(){ window.location.href='pantalla3.html'; }
-    window.irAlCarrito=irAlCarrito;
+    window.irAlCarrito = irAlCarrito;
 
+    // Init
     actualizarBotonCarrito();
   </script>
 </body>
