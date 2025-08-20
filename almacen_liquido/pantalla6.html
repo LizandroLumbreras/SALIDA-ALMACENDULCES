@@ -59,51 +59,80 @@
     </div>
   </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-  // ❌ elimina: import { jsPDF } from "jspdf";
+  <!-- Firebase + lógica -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // 🔹 Configuración Firebase
-  const firebaseConfig = {
-    apiKey: "TU_API_KEY",
-    authDomain: "inventariopv-643f1.firebaseapp.com",
-    projectId: "inventariopv-643f1",
-    storageBucket: "inventariopv-643f1.appspot.com",
-    messagingSenderId: "96242533231",
-    appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
-  };
+    // 🔹 CONFIGURA TU FIREBASE
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "inventariopv-643f1.firebaseapp.com",
+      projectId: "inventariopv-643f1",
+      storageBucket: "inventariopv-643f1.appspot.com",
+      messagingSenderId: "96242533231",
+      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  // ... aquí todo tu código igual ...
+    // ==============================
+    // 🔹 Recuperar datos de LocalStorage
+    // ==============================
+    const folio   = localStorage.getItem("folio") || localStorage.getItem("folioLiquidos") || "N/A";
+    const fecha   = localStorage.getItem("fecha") || new Date().toLocaleString();
 
-  // 🔹 Función Guardar y Descargar
-  window.guardarYDescargar = async function() {
-    try {
-      await addDoc(collection(db, "almacenes/Almacen_Liquidos/salidas"), {
-        folio, fecha, entrega, recibe, destino,
-        productos,
-        firmaEntrega: localStorage.getItem("firma_entrega_liquidos"),
-        firmaRecibe: localStorage.getItem("firma_recibe_liquidos"),
-        timestamp: serverTimestamp()
-      });
+    // Productos (acepta ambas variantes)
+    const productos = JSON.parse(localStorage.getItem("carritoLiquidos") || localStorage.getItem("carrito_liquidos") || "[]");
 
-      // ✅ Aquí usamos jsPDF desde window.jspdf
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ unit: "mm", format: [80, 200] });
+    // Firmas (acepta ambas variantes)
+    const firmaEntregaLS = localStorage.getItem("firmaEntregaLiquidos") || localStorage.getItem("firma_entrega_liquidos") || "";
+    const firmaRecibeLS  = localStorage.getItem("firmaRecibeLiquidos")  || localStorage.getItem("firma_recibe_liquidos")  || "";
+
+    // Mostrar info básica
+    document.getElementById("infoBasica").innerHTML = `
+      <p><b>Folio:</b> ${folio}</p>
+      <p><b>Fecha:</b> ${fecha}</p>
+    `;
+
+    // Render productos
+    const tbody = document.querySelector("#tablaProductos tbody");
+    productos.forEach(p => {
+      const fila = document.createElement("tr");
+      fila.innerHTML = `<td>${p.codigo}</td><td>${p.descripcion}</td><td>${p.cantidad}</td>`;
+      tbody.appendChild(fila);
+    });
+
+    // Mostrar firmas
+    document.getElementById("firmaEntrega").src = firmaEntregaLS;
+    document.getElementById("firmaRecibe").src  = firmaRecibeLS;
+
+    // ==============================
+    // 🔹 Función Guardar y Descargar PDF
+    // ==============================
+    window.guardarYDescargar = async function() {
+      try {
+        // Guardar en Firebase
+        await addDoc(collection(db, "almacenes/Almacen_Liquidos/salidas"), {
+          folio, fecha,
+          productos,
+          firmaEntrega: firmaEntregaLS,
+          firmaRecibe: firmaRecibeLS,
+          timestamp: serverTimestamp()
+        });
+
+        // Crear PDF tipo ticket
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: "mm", format: [80, 200] });
 
         doc.setFontSize(12);
         doc.text("La Proveedora", 40, 10, { align: "center" });
         doc.setFontSize(10);
         doc.text(`Folio: ${folio}`, 5, 20);
         doc.text(`Fecha: ${fecha}`, 5, 25);
-        doc.text(`Entrega: ${entrega}`, 5, 30);
-        doc.text(`Recibe: ${recibe}`, 5, 35);
-        doc.text(`Destino: ${destino}`, 5, 40);
 
-        let y = 50;
+        let y = 35;
         doc.setFontSize(9);
         productos.forEach(p => {
           doc.text(`${p.codigo} - ${p.descripcion} (${p.cantidad})`, 5, y);
@@ -111,15 +140,12 @@
         });
 
         // Firmas
-        const firmaEntrega = localStorage.getItem("firma_entrega_liquidos");
-        const firmaRecibe  = localStorage.getItem("firma_recibe_liquidos");
-
-        if (firmaEntrega) {
-          doc.addImage(firmaEntrega, "PNG", 5, y+5, 30, 15);
+        if (firmaEntregaLS) {
+          doc.addImage(firmaEntregaLS, "PNG", 5, y+5, 30, 15);
           doc.text("Entrega", 5, y+22);
         }
-        if (firmaRecibe) {
-          doc.addImage(firmaRecibe, "PNG", 45, y+5, 30, 15);
+        if (firmaRecibeLS) {
+          doc.addImage(firmaRecibeLS, "PNG", 45, y+5, 30, 15);
           doc.text("Recibe", 45, y+22);
         }
 
