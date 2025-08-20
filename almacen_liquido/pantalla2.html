@@ -35,62 +35,70 @@
     </table>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // 🔹 Configuración Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
-      authDomain: "inventariopv-643f1.firebaseapp.com",
-      projectId: "inventariopv-643f1",
-      storageBucket: "inventariopv-643f1.appspot.com",
-      messagingSenderId: "96242533231",
-      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
-    };
+  // 🔹 Configuración Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
+    authDomain: "inventariopv-643f1.firebaseapp.com",
+    projectId: "inventariopv-643f1",
+    storageBucket: "inventariopv-643f1.firebasestorage.app",
+    messagingSenderId: "96242533231",
+    appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    let productos = [];
+  // === Buscar producto ===
+  window.buscarProducto = async function (texto) {
+    const tabla = document.getElementById("tablaProductos");
+    tabla.innerHTML = "";
 
-    // ✅ Cargar todos los productos de la colección "productos"
-    async function cargarProductos() {
-      const querySnap = await getDocs(collection(db, "productos"));
-      productos = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    }
-    cargarProductos();
+    if (!texto.trim()) return;
 
-    // ✅ Buscar en tiempo real
-    function buscarProducto() {
-      const valor = document.getElementById("buscador").value.toLowerCase();
-      const resultados = productos.filter(p =>
-        p.Descripcion?.toLowerCase().includes(valor) ||
-        p["Codigo Barra"]?.toLowerCase().includes(valor)
+    try {
+      // 🔍 Buscar en colección productos
+      const q = query(
+        collection(db, "productos"),
+        where("Nombre", ">=", texto.toUpperCase()),
+        where("Nombre", "<=", texto.toUpperCase() + "\uf8ff")
       );
 
-      const tbody = document.getElementById("tablaResultados");
-      tbody.innerHTML = "";
-      resultados.forEach(p => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${p["Codigo Barra"]||""}</td>
-          <td>${p.Descripcion||""}</td>
-          <td>${p.Unidad||""}</td>
-          <td><button onclick="agregarProducto('${p.id}')">Agregar</button></td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
+      const snap = await getDocs(q);
 
-    // ✅ Guardar en carrito temporal (localStorage)
-    window.agregarProducto = function(id) {
-      const prod = productos.find(p => p.id === id);
-      let carrito = JSON.parse(localStorage.getItem("carrito_liquido")) || [];
-      carrito.push({ ...prod, cantidad: 1 });
-      localStorage.setItem("carrito_liquido", JSON.stringify(carrito));
-      alert("Producto agregado ✅");
+      if (snap.empty) {
+        tabla.innerHTML = `<tr><td colspan="4">⚠️ No se encontró el producto</td></tr>`;
+        return;
+      }
+
+      snap.forEach(doc => {
+        const p = doc.data();
+        const fila = `
+          <tr>
+            <td>${p["Codigo Barra"] || ""}</td>
+            <td>${p.Nombre || ""}</td>
+            <td>${p.Unidad || ""}</td>
+            <td><button onclick="agregarProducto('${doc.id}','${p.Nombre}','${p.Unidad}')">➕ Agregar</button></td>
+          </tr>
+        `;
+        tabla.innerHTML += fila;
+      });
+    } catch (e) {
+      console.error("❌ Error al buscar:", e);
     }
-  </script>
+  };
+
+  // === Agregar producto temporalmente ===
+  window.agregarProducto = function (id, nombre, unidad) {
+    let carrito = JSON.parse(localStorage.getItem("carritoLiquidos") || "[]");
+    carrito.push({ id, nombre, unidad, cantidad: 1 });
+    localStorage.setItem("carritoLiquidos", JSON.stringify(carrito));
+    alert(`✅ ${nombre} agregado`);
+  };
+</script>
+
 </body>
 </html>
