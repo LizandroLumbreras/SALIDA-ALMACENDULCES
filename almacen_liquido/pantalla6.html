@@ -59,66 +59,40 @@
     </div>
   </div>
 
-  <!-- Firebase + lógica -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { jsPDF } from "jspdf";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  // ❌ elimina: import { jsPDF } from "jspdf";
 
-    // 🔹 CONFIGURA TU FIREBASE
-    const firebaseConfig = {
-      apiKey: "TU_API_KEY",
-      authDomain: "inventariopv-643f1.firebaseapp.com",
-      projectId: "inventariopv-643f1",
-      storageBucket: "inventariopv-643f1.appspot.com",
-      messagingSenderId: "96242533231",
-      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
-    };
+  // 🔹 Configuración Firebase
+  const firebaseConfig = {
+    apiKey: "TU_API_KEY",
+    authDomain: "inventariopv-643f1.firebaseapp.com",
+    projectId: "inventariopv-643f1",
+    storageBucket: "inventariopv-643f1.appspot.com",
+    messagingSenderId: "96242533231",
+    appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    // Datos desde localStorage
-    const folio   = localStorage.getItem("folio_liquidos") || "N/A";
-    const fecha   = localStorage.getItem("fecha_liquidos") || new Date().toLocaleString();
-    const entrega = localStorage.getItem("entrega_liquidos") || "N/A";
-    const recibe  = localStorage.getItem("recibe_liquidos") || "N/A";
-    const destino = localStorage.getItem("destino_liquidos") || "N/A";
-    const productos = JSON.parse(localStorage.getItem("productos_liquidos") || "[]");
+  // ... aquí todo tu código igual ...
 
-    document.getElementById("infoBasica").innerHTML = `
-      <p><b>Folio:</b> ${folio}</p>
-      <p><b>Fecha:</b> ${fecha}</p>
-      <p><b>Entrega:</b> ${entrega}</p>
-      <p><b>Recibe:</b> ${recibe}</p>
-      <p><b>Destino:</b> ${destino}</p>
-    `;
+  // 🔹 Función Guardar y Descargar
+  window.guardarYDescargar = async function() {
+    try {
+      await addDoc(collection(db, "almacenes/Almacen_Liquidos/salidas"), {
+        folio, fecha, entrega, recibe, destino,
+        productos,
+        firmaEntrega: localStorage.getItem("firma_entrega_liquidos"),
+        firmaRecibe: localStorage.getItem("firma_recibe_liquidos"),
+        timestamp: serverTimestamp()
+      });
 
-    const tbody = document.querySelector("#tablaProductos tbody");
-    productos.forEach(p => {
-      const fila = document.createElement("tr");
-      fila.innerHTML = `<td>${p.codigo}</td><td>${p.descripcion}</td><td>${p.cantidad}</td>`;
-      tbody.appendChild(fila);
-    });
-
-    document.getElementById("firmaEntrega").src = localStorage.getItem("firma_entrega_liquidos") || "";
-    document.getElementById("firmaRecibe").src  = localStorage.getItem("firma_recibe_liquidos") || "";
-
-    // 🔹 Función Guardar y Descargar
-    window.guardarYDescargar = async function() {
-      try {
-        // Guardar en Firebase
-        await addDoc(collection(db, "almacenes/Almacen_Liquidos/salidas"), {
-          folio, fecha, entrega, recibe, destino,
-          productos,
-          firmaEntrega: localStorage.getItem("firma_entrega_liquidos"),
-          firmaRecibe: localStorage.getItem("firma_recibe_liquidos"),
-          timestamp: serverTimestamp()
-        });
-
-        // Crear PDF tipo ticket
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ unit: "mm", format: [80, 200] });
+      // ✅ Aquí usamos jsPDF desde window.jspdf
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: "mm", format: [80, 200] });
 
         doc.setFontSize(12);
         doc.text("La Proveedora", 40, 10, { align: "center" });
