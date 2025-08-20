@@ -159,22 +159,22 @@ window.buscarProducto = function () {
   });
 };
 
-    // Agregar producto al carrito
-    window.agregar = function (codigo) {
-      const cantidad = parseInt(document.getElementById(`cant-${codigo}`).value);
-      const prod = productos.find(p => p["Codigo Barra"] == codigo);
+   // Agregar producto al carrito
+window.agregar = function (codigo) {
+  const cantidad = parseInt(document.getElementById(`cant-${codigo}`).value);
+  const prod = productos.find(p => p.codigoBarra == codigo);
 
-      if (prod) {
-        carrito.push({
-          codigo: prod["Codigo Barra"],
-          descripcion: prod.Descripcion,
-          unidad: prod.Unidad,
-          cantidad
-        });
-        localStorage.setItem("carrito_liquidos", JSON.stringify(carrito));
-        alert(`✅ ${prod.Descripcion} agregado al carrito`);
-      }
-    };
+  if (prod) {
+    carrito.push({
+      codigo: prod.codigoBarra,
+      descripcion: prod.concepto,   // 👈 aquí uso concepto
+      unidad: prod.unidad || "",
+      cantidad
+    });
+    localStorage.setItem("carrito_liquidos", JSON.stringify(carrito));
+    alert(`✅ ${prod.concepto} agregado al carrito`);
+  }
+};
 
     // Continuar a pantalla3
     window.continuar = function () {
