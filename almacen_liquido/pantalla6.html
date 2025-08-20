@@ -2,64 +2,77 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <title>Resumen Final – Almacén Líquidos</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resumen Final - Almacén Líquidos</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body{
       font-family:'Poppins',sans-serif;
       background:linear-gradient(to right,#00416A,#E4E5E6);
-      margin:0;padding:20px;color:#111;
+      margin:0; padding:20px; min-height:100vh;
+      box-sizing:border-box;
     }
     .contenedor{
-      max-width:800px;margin:auto;background:white;padding:20px;
-      border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);
+      background:white; max-width:900px; margin:auto;
+      border-radius:12px; padding:20px;
+      box-shadow:0 4px 12px rgba(0,0,0,.2);
     }
-    h2{color:#00416A;text-align:center;margin-bottom:20px}
-    table{width:100%;border-collapse:collapse;margin-top:20px}
+    h2{text-align:center;color:#00416A;margin-bottom:20px}
+    .info{margin-bottom:20px}
+    .info p{margin:6px 0;font-size:16px}
+    table{width:100%;border-collapse:collapse;margin-top:15px}
     th,td{border:1px solid #ccc;padding:8px;text-align:center}
     th{background:#00416A;color:white}
-    .firmas{display:flex;justify-content:space-around;margin-top:30px;flex-wrap:wrap}
-    .firma-box{text-align:center}
-    .firma-box img{max-width:200px;border:1px solid #ccc}
-    .acciones{text-align:center;margin-top:25px}
-    button{
-      padding:12px 20px;border:none;border-radius:6px;
-      cursor:pointer;font-size:15px;font-weight:600;color:white;
-      background:#00416A;
+    .firmas{display:flex;justify-content:space-around;margin-top:25px;flex-wrap:wrap}
+    .firma-box{text-align:center;margin:10px}
+    .firma-box img{border:1px solid #ccc;width:220px;height:100px;object-fit:contain;background:#fdfdfd}
+    .boton{
+      display:block;margin:25px auto 0;padding:12px 24px;
+      background:#00416A;color:white;font-size:16px;
+      border:none;border-radius:6px;cursor:pointer;
+      transition:.3s;
     }
+    .boton:hover{background:#006699}
   </style>
 </head>
 <body>
   <div class="contenedor">
-    <h2>Resumen Final - Almacén Líquidos</h2>
-    <p><b>Folio:</b> <span id="folio"></span></p>
-    <p><b>Fecha:</b> <span id="fecha"></span></p>
-    <p><b>Entrega:</b> <span id="entrega"></span></p>
-    <p><b>Recibe:</b> <span id="recibe"></span></p>
-    <p><b>Destino:</b> <span id="destino"></span></p>
+    <h2>Resumen Final – Almacén Líquidos</h2>
 
+    <div class="info">
+      <p><b>Folio:</b> <span id="folio"></span></p>
+      <p><b>Fecha:</b> <span id="fecha"></span></p>
+      <p><b>Destino:</b> <span id="destino"></span></p>
+      <p><b>Entrega:</b> <span id="entrega"></span></p>
+      <p><b>Recibe:</b> <span id="recibe"></span></p>
+    </div>
+
+    <h3>Productos</h3>
     <table>
       <thead>
-        <tr><th>Código</th><th>Producto</th><th>Cantidad</th></tr>
+        <tr>
+          <th>Código</th>
+          <th>Descripción</th>
+          <th>Cantidad</th>
+        </tr>
       </thead>
       <tbody id="tablaProductos"></tbody>
     </table>
 
     <div class="firmas">
       <div class="firma-box">
-        <p>Firma Quien Entrega</p>
-        <img id="firmaEntrega" alt="Firma entrega">
+        <p><b>Firma – Quien Entrega</b></p>
+        <img id="firmaEntrega" alt="Firma Entrega">
+        <p id="nombreEntrega"></p>
       </div>
       <div class="firma-box">
-        <p>Firma Quien Recibe</p>
-        <img id="firmaRecibe" alt="Firma recibe">
+        <p><b>Firma – Quien Recibe</b></p>
+        <img id="firmaRecibe" alt="Firma Recibe">
+        <p id="nombreRecibe"></p>
       </div>
     </div>
 
-    <div class="acciones">
-      <button onclick="guardarYDescargar()">💾 Guardar y Descargar Ticket</button>
-    </div>
+    <button class="boton" onclick="guardarFirebase()">Guardar en Firebase</button>
   </div>
 
   <!-- Firebase -->
@@ -67,75 +80,67 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // 🔹 Configuración Firebase
+    // 🔹 Tu configuración Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
       authDomain: "inventariopv-643f1.firebaseapp.com",
       projectId: "inventariopv-643f1",
-      storageBucket: "inventariopv-643f1.appspot.com",
+      storageBucket: "inventariopv-643f1.firebasestorage.app",
       messagingSenderId: "96242533231",
       appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
     };
+
+    // Inicializar Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 🔹 Recuperar datos de localStorage
-    const folio = localStorage.getItem("folioLiquidos") || "SIN FOLIO";
-    const fecha = localStorage.getItem("fechaLiquidos") || new Date().toLocaleString();
-    const entrega = localStorage.getItem("entregaLiquidos") || "";
-    const recibe = localStorage.getItem("recibeLiquidos") || "";
-    const destino = localStorage.getItem("destinoLiquidos") || "";
+    // Recuperar datos del localStorage
+    document.getElementById("folio").textContent   = localStorage.getItem("folioLiquidos")   || "";
+    document.getElementById("fecha").textContent   = localStorage.getItem("fechaLiquidos")   || "";
+    document.getElementById("destino").textContent = localStorage.getItem("destinoLiquidos") || "";
+    document.getElementById("entrega").textContent = localStorage.getItem("entregaLiquidos") || "";
+    document.getElementById("recibe").textContent  = localStorage.getItem("recibeLiquidos")  || "";
+
+    document.getElementById("firmaEntrega").src    = localStorage.getItem("firmaEntregaLiquidos") || "";
+    document.getElementById("firmaRecibe").src     = localStorage.getItem("firmaRecibeLiquidos")  || "";
+    document.getElementById("nombreEntrega").textContent = localStorage.getItem("entregaLiquidos") || "";
+    document.getElementById("nombreRecibe").textContent  = localStorage.getItem("recibeLiquidos")  || "";
+
+    // Productos
     const productos = JSON.parse(localStorage.getItem("productosLiquidos") || "[]");
-    const firmaEntrega = localStorage.getItem("firmaEntregaLiquidos");
-    const firmaRecibe = localStorage.getItem("firmaRecibeLiquidos");
-
-    document.getElementById("folio").textContent = folio;
-    document.getElementById("fecha").textContent = fecha;
-    document.getElementById("entrega").textContent = entrega;
-    document.getElementById("recibe").textContent = recibe;
-    document.getElementById("destino").textContent = destino;
-
-    if (firmaEntrega) document.getElementById("firmaEntrega").src = firmaEntrega;
-    if (firmaRecibe) document.getElementById("firmaRecibe").src = firmaRecibe;
-
     const tabla = document.getElementById("tablaProductos");
     productos.forEach(p=>{
-      tabla.innerHTML += `<tr><td>${p.codigo}</td><td>${p.nombre}</td><td>${p.cantidad}</td></tr>`;
+      const fila = `<tr>
+                      <td>${p.codigo}</td>
+                      <td>${p.descripcion}</td>
+                      <td>${p.cantidad}</td>
+                    </tr>`;
+      tabla.insertAdjacentHTML("beforeend", fila);
     });
 
-    // 🔹 Guardar en Firebase y descargar ticket
-    async function guardarYDescargar(){
+    // Guardar en Firebase
+    async function guardarFirebase(){
       try{
-        await addDoc(collection(db,"almacenes","almacen_liquidos","salidas"),{
-          folio,fecha,entrega,recibe,destino,productos,
-          firmaEntrega,firmaRecibe,
-          timestamp:new Date()
+        await addDoc(collection(db, "almacenes/almacen_liquidos/salidas"), {
+          folio: localStorage.getItem("folioLiquidos"),
+          fecha: localStorage.getItem("fechaLiquidos"),
+          destino: localStorage.getItem("destinoLiquidos"),
+          entrega: localStorage.getItem("entregaLiquidos"),
+          recibe: localStorage.getItem("recibeLiquidos"),
+          firmaEntrega: localStorage.getItem("firmaEntregaLiquidos"),
+          firmaRecibe: localStorage.getItem("firmaRecibeLiquidos"),
+          productos: productos,
+          timestamp: new Date()
         });
-
-        // Crear ticket en texto
-        let ticket = `*** SALIDA ALMACÉN LÍQUIDOS ***\n`;
-        ticket += `Folio: ${folio}\nFecha: ${fecha}\nDestino: ${destino}\n`;
-        ticket += `Entrega: ${entrega}\nRecibe: ${recibe}\n\nProductos:\n`;
-        productos.forEach(p=>{
-          ticket += `- ${p.codigo} | ${p.nombre} x ${p.cantidad}\n`;
-        });
-        ticket += `\n----------------------------\nGracias por su registro.\n`;
-
-        // Descargar como archivo .txt
-        const blob = new Blob([ticket], {type:"text/plain"});
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `Ticket_${folio}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        alert("✅ Guardado en Firebase y ticket descargado");
+        alert("✅ Salida guardada en Firebase correctamente");
       }catch(e){
-        alert("❌ Error al guardar: "+e);
-        console.error(e);
+        console.error("Error al guardar:", e);
+        alert("❌ Error al guardar en Firebase");
       }
     }
+
+    // Hacer la función accesible al botón
+    window.guardarFirebase = guardarFirebase;
   </script>
 </body>
 </html>
