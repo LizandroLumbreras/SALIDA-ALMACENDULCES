@@ -1,161 +1,233 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Resumen Final - Salida Líquidos</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resumen de salida - Líquidos</title>
   <style>
-    body {
-      font-family: 'Poppins', sans-serif;
+    :root{
+      --ticket-width-mm: 80;   /* ancho papel térmico */
+      --ticket-margin-mm: 5;   /* márgenes del PDF */
+    }
+
+    body{
+      font-family: Arial, sans-serif;
       background: linear-gradient(to right,#00416A,#E4E5E6);
-      margin: 0; padding: 20px;
+      color: black;
+      padding: 20px;
+      box-sizing: border-box;
+      min-height: 100vh;
     }
-    .contenedor {
-      background: #fff; border-radius: 12px;
-      padding: 20px; max-width: 900px; margin: auto;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    .contenedor{
+      background: white;
+      border-radius: 10px;
+      padding: 16px 14px;
+      max-width: 820px;
+      margin: auto;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
-    h2 { text-align: center; color:#00416A; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    th { background:#00416A; color:white; }
-    .firmas { display:flex; justify-content: space-around; margin-top:20px; flex-wrap:wrap; }
-    .firma-box { text-align: center; margin:10px; }
-    .firma-box img { border:1px solid #aaa; border-radius:8px; max-width:200px; max-height:120px; }
-    button {
-      padding:12px 20px; border:none; border-radius:8px;
-      margin:10px; cursor:pointer; font-size:16px; color:#fff;
-      background:#0c6cbd;
+
+    .header{text-align: center;margin-bottom: 8px;}
+    .logo{
+      display:block;margin: 0 auto 6px auto;width: 220px;max-width: 90%;
+      image-rendering: -webkit-optimize-contrast;filter: grayscale(0);
     }
+    .titulo{margin: 2px 0 8px 0;color: #00416A;font-size: 20px;font-weight: 700;text-align: center;}
+
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{border:1px solid #ccc;padding:6px 4px;text-align:center}
+    th{background-color:#00416A;color:white}
+
+    .firmas{display:flex;justify-content:space-around;margin-top:18px;gap: 10px;flex-wrap:wrap}
+    .firma-box{text-align:center}
+    .firma-box img{width:180px;height:auto;border:1px solid #ccc}
+
+    .btn-imprimir{
+      display:block;margin:18px auto 0;
+      padding:12px 20px;background-color:#0c6cbd;color:white;border:none;
+      border-radius:6px;font-size:16px;cursor:pointer
+    }
+    .btn-imprimir:hover{background-color:#094a85}
+
+    @media print {.btn-imprimir{display:none;}}
   </style>
 </head>
 <body>
-  <div class="contenedor">
-    <h2>Resumen Final – Salida de Almacén Líquidos</h2>
-    <div id="infoBasica"></div>
+  <div class="contenedor" id="resumenSalida">
+    <div class="header">
+      <img id="logoEmpresa" class="logo" src="logo_proveedora.webp" alt="Logo La Proveedora" crossOrigin="anonymous">
+      <div class="titulo">Resumen de Salida - Líquidos</div>
+    </div>
 
-    <table id="tablaProductos">
+    <p><strong>Folio:</strong> <span id="folio"></span></p>
+    <p><strong>Fecha y Hora:</strong> <span id="fecha"></span></p>
+    <p><strong>Entrega:</strong> <span id="entrega"></span></p>
+    <p><strong>Recibe:</strong> <span id="recibe"></span></p>
+    <p><strong>Destino:</strong> <span id="destino"></span></p>
+
+    <table>
       <thead>
-        <tr><th>Código</th><th>Descripción</th><th>Cantidad</th></tr>
+        <tr>
+          <th>Código</th>
+          <th>Descripción</th>
+          <th>Cantidad</th>
+        </tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="tabla-productos"></tbody>
     </table>
 
     <div class="firmas">
       <div class="firma-box">
-        <p>Firma Quien Entrega</p>
+        <p>Firma entrega</p>
         <img id="firmaEntrega" alt="Firma entrega">
       </div>
       <div class="firma-box">
-        <p>Firma Quien Recibe</p>
+        <p>Firma recibe</p>
         <img id="firmaRecibe" alt="Firma recibe">
       </div>
     </div>
-
-    <div style="text-align:center;margin-top:20px;">
-      <button onclick="guardarYDescargar()">💾 Guardar y Descargar PDF</button>
-    </div>
   </div>
 
-  <!-- Firebase + lógica -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  <button class="btn-imprimir" id="btnGuardarDescargar">Guardar y descargar PDF</button>
 
-    // 🔹 CONFIGURA TU FIREBASE
+  <!-- Firebase + librerías -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    // Configuración Firebase
     const firebaseConfig = {
-      apiKey: "TU_API_KEY",
+      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
       authDomain: "inventariopv-643f1.firebaseapp.com",
       projectId: "inventariopv-643f1",
       storageBucket: "inventariopv-643f1.appspot.com",
       messagingSenderId: "96242533231",
       appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // Datos desde localStorage
+    const folio   = localStorage.getItem('folio') || '';
+    const fecha   = localStorage.getItem('fecha') || new Date().toLocaleString("es-MX");
+    const entrega = localStorage.getItem('entrega') || '';
+    const recibe  = localStorage.getItem('recibe') || '';
+    const destino = localStorage.getItem('destino') || '';
+    const productos = JSON.parse(localStorage.getItem('carritoLiquidos') || localStorage.getItem('carrito_liquidos') || '[]');
+    const firmaEntrega = localStorage.getItem('firmaEntregaLiquidos') || localStorage.getItem('firma_entrega_liquidos') || '';
+    const firmaRecibe  = localStorage.getItem('firmaRecibeLiquidos')  || localStorage.getItem('firma_recibe_liquidos')  || '';
 
-    // ==============================
-    // 🔹 Recuperar datos de LocalStorage
-    // ==============================
-    const folio   = localStorage.getItem("folio") || localStorage.getItem("folioLiquidos") || "N/A";
-    const fecha   = localStorage.getItem("fecha") || new Date().toLocaleString();
+    // Pintar encabezado y firmas
+    document.getElementById('folio').textContent = folio;
+    document.getElementById('fecha').textContent = fecha;
+    document.getElementById('entrega').textContent = entrega;
+    document.getElementById('recibe').textContent = recibe;
+    document.getElementById('destino').textContent = destino;
+    document.getElementById('firmaEntrega').src = firmaEntrega;
+    document.getElementById('firmaRecibe').src = firmaRecibe;
 
-    // Productos (acepta ambas variantes)
-    const productos = JSON.parse(localStorage.getItem("carritoLiquidos") || localStorage.getItem("carrito_liquidos") || "[]");
-
-    // Firmas (acepta ambas variantes)
-    const firmaEntregaLS = localStorage.getItem("firmaEntregaLiquidos") || localStorage.getItem("firma_entrega_liquidos") || "";
-    const firmaRecibeLS  = localStorage.getItem("firmaRecibeLiquidos")  || localStorage.getItem("firma_recibe_liquidos")  || "";
-
-    // Mostrar info básica
-    document.getElementById("infoBasica").innerHTML = `
-      <p><b>Folio:</b> ${folio}</p>
-      <p><b>Fecha:</b> ${fecha}</p>
-    `;
-
-    // Render productos
-    const tbody = document.querySelector("#tablaProductos tbody");
+    // Tabla de productos
+    const tabla = document.getElementById('tabla-productos');
     productos.forEach(p => {
-      const fila = document.createElement("tr");
-      fila.innerHTML = `<td>${p.codigo}</td><td>${p.descripcion}</td><td>${p.cantidad}</td>`;
-      tbody.appendChild(fila);
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${p.codigo || ''}</td>
+        <td>${p.descripcion || ''}</td>
+        <td>${p.cantidad || 0}</td>
+      `;
+      tabla.appendChild(row);
     });
 
-    // Mostrar firmas
-    document.getElementById("firmaEntrega").src = firmaEntregaLS;
-    document.getElementById("firmaRecibe").src  = firmaRecibeLS;
-
-    // ==============================
-    // 🔹 Función Guardar y Descargar PDF
-    // ==============================
-    window.guardarYDescargar = async function() {
-      try {
-        // Guardar en Firebase
-        await addDoc(collection(db, "almacenes/Almacen_Liquidos/salidas"), {
-          folio, fecha,
-          productos,
-          firmaEntrega: firmaEntregaLS,
-          firmaRecibe: firmaRecibeLS,
-          timestamp: serverTimestamp()
-        });
-
-        // Crear PDF tipo ticket
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ unit: "mm", format: [80, 200] });
-
-        doc.setFontSize(12);
-        doc.text("La Proveedora", 40, 10, { align: "center" });
-        doc.setFontSize(10);
-        doc.text(`Folio: ${folio}`, 5, 20);
-        doc.text(`Fecha: ${fecha}`, 5, 25);
-
-        let y = 35;
-        doc.setFontSize(9);
-        productos.forEach(p => {
-          doc.text(`${p.codigo} - ${p.descripcion} (${p.cantidad})`, 5, y);
-          y += 5;
-        });
-
-        // Firmas
-        if (firmaEntregaLS) {
-          doc.addImage(firmaEntregaLS, "PNG", 5, y+5, 30, 15);
-          doc.text("Entrega", 5, y+22);
-        }
-        if (firmaRecibeLS) {
-          doc.addImage(firmaRecibeLS, "PNG", 45, y+5, 30, 15);
-          doc.text("Recibe", 45, y+22);
-        }
-
-        doc.save(`Salida_${folio}.pdf`);
-        alert("✅ Guardado en Firebase y PDF descargado");
-      } catch (e) {
-        console.error("Error:", e);
-        alert("❌ Error al guardar/descargar");
-      }
+    const irAlInicio = () => {
+      localStorage.clear();
+      window.location.href = "index.html";
     };
+
+    // Guarda en Firestore
+    async function guardarSalida() {
+      const data = {
+        folio, fecha, entrega, recibe, destino, productos, firmaEntrega, firmaRecibe,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      await db.collection("almacenes")
+        .doc("Almacen_Liquidos")
+        .collection("salidas")
+        .add(data);
+
+      const folioDoc = db.collection("consecutivos").doc("salidas_liquidos");
+      const snap = await folioDoc.get();
+      if (snap.exists) {
+        await folioDoc.update({ ultimo: (snap.data().ultimo || 1) + 1 });
+      } else {
+        await folioDoc.set({ ultimo: 2 });
+      }
+    }
+
+    function preload(imgEl){
+      return new Promise(res=>{
+        if(!imgEl) return res();
+        if (imgEl.complete) return res();
+        imgEl.onload = ()=>res();
+        imgEl.onerror = ()=>res();
+      });
+    }
+
+    async function descargarPDF() {
+      const { jsPDF } = window.jspdf;
+      const resumen = document.getElementById('resumenSalida');
+
+      await Promise.all([
+        preload(document.getElementById('logoEmpresa')),
+        preload(document.getElementById('firmaEntrega')),
+        preload(document.getElementById('firmaRecibe')),
+      ]);
+
+      const canvas = await html2canvas(resumen, {
+        scale: 2, useCORS: true, backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/png');
+
+      const ticketWidthMM = parseFloat(getComputedStyle(document.documentElement)
+        .getPropertyValue('--ticket-width-mm')) || 80;
+      const marginMM = parseFloat(getComputedStyle(document.documentElement)
+        .getPropertyValue('--ticket-margin-mm')) || 5;
+
+      const imgPxWidth = canvas.width;
+      const imgPxHeight = canvas.height;
+
+      const usableWidthMM = ticketWidthMM - (marginMM * 2);
+      const pxPerMM = imgPxWidth / usableWidthMM;
+      const heightMM = imgPxHeight / pxPerMM + (marginMM * 2);
+
+      const pdf = new jsPDF('p', 'mm', [ticketWidthMM, heightMM]);
+      const x = marginMM;
+      const y = marginMM;
+      const w = usableWidthMM;
+      const h = imgPxHeight / pxPerMM;
+
+      pdf.addImage(imgData, 'PNG', x, y, w, h);
+      const nombre = `Comprobante_${(folio || 'SAL-LIQ').replace(/\s+/g,'_')}.pdf`;
+      pdf.save(nombre);
+    }
+
+    async function guardarYDescargar() {
+      if (!productos || productos.length === 0) {
+        alert("No hay productos en el resumen.");
+        return;
+      }
+      try {
+        await guardarSalida();    // Guardar en Firestore
+        await descargarPDF();     // Descargar comprobante PDF
+        setTimeout(irAlInicio, 2000); // Redirigir después de 2s
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    }
+
+    document.getElementById('btnGuardarDescargar').addEventListener('click', guardarYDescargar);
   </script>
 </body>
 </html>
