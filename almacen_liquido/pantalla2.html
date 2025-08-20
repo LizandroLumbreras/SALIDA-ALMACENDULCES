@@ -118,46 +118,46 @@
       console.log("✅ Productos cargados:", productos.length);
     }
 
-    // Buscar producto
-    window.buscarProducto = function () {
-      const texto = document.getElementById("buscador").value.trim().toLowerCase();
-      const tabla = document.getElementById("tablaResultados");
-      tabla.innerHTML = "";
+   // Buscar producto
+window.buscarProducto = function () {
+  const texto = document.getElementById("buscador").value.trim().toLowerCase();
+  const tabla = document.getElementById("tablaResultados");
+  tabla.innerHTML = "";
 
-      if (!texto) return;
+  if (!texto) return;
 
-      let resultados = [];
+  let resultados = [];
 
-      // Si es número largo → buscar exacto
-      if (!isNaN(texto) && texto.length >= 6) {
-        resultados = productos.filter(p =>
-          p["Codigo Barra"]?.toString() === texto
-        );
-      } else {
-        // Si es texto → buscar parcial
-        resultados = productos.filter(p =>
-          p["Codigo Barra"]?.toString().includes(texto) ||
-          p.Descripcion?.toLowerCase().includes(texto)
-        );
-      }
+  // Si es número largo → buscar exacto
+  if (!isNaN(texto) && texto.length >= 6) {
+    resultados = productos.filter(p =>
+      p.codigoBarra?.toString() === texto   // 👈 aquí uso codigoBarra
+    );
+  } else {
+    // Si es texto → buscar parcial
+    resultados = productos.filter(p =>
+      p.codigoBarra?.toString().includes(texto) ||
+      p.concepto?.toLowerCase().includes(texto)  // 👈 aquí uso concepto
+    );
+  }
 
-      if (resultados.length === 0) {
-        tabla.innerHTML = `<tr><td colspan="5">❌ Producto no encontrado</td></tr>`;
-        return;
-      }
+  if (resultados.length === 0) {
+    tabla.innerHTML = `<tr><td colspan="5">❌ Producto no encontrado</td></tr>`;
+    return;
+  }
 
-      resultados.forEach(prod => {
-        const fila = document.createElement("tr");
-        fila.innerHTML = `
-          <td>${prod["Codigo Barra"] || ""}</td>
-          <td>${prod.Descripcion || ""}</td>
-          <td>${prod.Unidad || ""}</td>
-          <td><input type="number" min="1" value="1" id="cant-${prod["Codigo Barra"]}"></td>
-          <td><button onclick='agregar("${prod["Codigo Barra"]}")'>Agregar</button></td>
-        `;
-        tabla.appendChild(fila);
-      });
-    };
+  resultados.forEach(prod => {
+    const fila = document.createElement("tr");
+    fila.innerHTML = `
+      <td>${prod.codigoBarra || ""}</td>
+      <td>${prod.concepto || ""}</td>
+      <td>${prod.unidad || ""}</td>
+      <td><input type="number" min="1" value="1" id="cant-${prod.codigoBarra}"></td>
+      <td><button onclick='agregar("${prod.codigoBarra}")'>Agregar</button></td>
+    `;
+    tabla.appendChild(fila);
+  });
+};
 
     // Agregar producto al carrito
     window.agregar = function (codigo) {
