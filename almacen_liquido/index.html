@@ -3,36 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Salida - Almacén Líquidos</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <title>Salida – Almacén Líquidos</title>
   <style>
-    body {
-      font-family: 'Poppins', sans-serif;
+    body{
+      font-family: Arial, sans-serif;
       background: linear-gradient(to right,#00416A,#E4E5E6);
-      margin: 0; padding: 0; min-height: 100vh;
-      display: flex; justify-content: center; align-items: center;
+      margin:0; padding:20px;
+      min-height:100vh; display:flex; justify-content:center; align-items:center;
     }
-    .contenedor {
-      background: #fff; padding: 20px; border-radius: 12px;
-      max-width: 500px; width: 100%;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    .card{
+      background:white; padding:30px; border-radius:12px;
+      box-shadow:0 4px 15px rgba(0,0,0,.2); max-width:400px; width:100%;
     }
-    h2 { text-align: center; color:#00416A; }
-    label { font-weight: 600; display:block; margin-top: 12px; }
-    input, select {
-      width: 100%; padding: 8px; margin-top: 5px;
-      border: 1px solid #ccc; border-radius: 6px;
+    h2{ text-align:center; color:#00416A; margin-bottom:20px; }
+    label{ display:block; margin-top:12px; font-weight:bold; color:#00416A; }
+    input,select{
+      width:100%; padding:10px; margin-top:6px;
+      border:1px solid #ccc; border-radius:6px; font-size:15px;
     }
-    button {
-      margin-top: 18px; width: 100%; padding: 12px;
-      background: #00416A; color: white; border: none; border-radius: 6px;
-      cursor: pointer; font-size: 16px; font-weight: 600;
+    button{
+      margin-top:20px; width:100%; padding:12px;
+      border:none; border-radius:6px;
+      background:#00416A; color:white; font-size:16px; font-weight:bold;
+      cursor:pointer;
     }
-    button:hover { background: #0c6cbd; }
+    button:hover{ background:#033b57; }
   </style>
 </head>
 <body>
-  <div class="contenedor">
+  <div class="card">
     <h2>Salida – Almacén Líquidos</h2>
 
     <label for="folio">Folio:</label>
@@ -143,33 +142,26 @@
         alert("Completa todos los campos.");
         return;
       }
-
-      // Guardar en localStorage
-      localStorage.setItem("folio", folio);
-      localStorage.setItem("fecha", fecha);
-      localStorage.setItem("entrega", entrega);
-      localStorage.setItem("recibe", recibe);
-      localStorage.setItem("destino", destino);
-
-      // Actualizar consecutivo
-      const ref = doc(db, "consecutivos", "salidas_liquido");
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        await updateDoc(ref, { ultimo: snap.data().ultimo + 1 });
-      } else {
-        await setDoc(ref, { ultimo: 1 });
+   // Guardar en Firestore
+      try {
+        await setDoc(doc(db, "almacenes/Almacen_Liquidos/salidas_temp", folio), {
+          folio, fecha, entrega, recibe, destino
+        });
+        console.log("✅ Datos guardados en Firestore");
+      } catch (e) {
+        console.error("❌ Error al guardar:", e);
       }
 
-      // Pasar a la pantalla 2
-      // Pasar a la pantalla 2 (ruta absoluta en GitHub Pages)
-window.location.href = "https://lizandrolumbreras.github.io/SALIDA-ALMACENDULCES/almacen_liquido/pantalla2.html";
+      // Guardar también en localStorage para usar en pantalla2.html
+      localStorage.setItem("folioLiquidos", parseInt(folioNum)+1);
+      localStorage.setItem("salidaLiquidos", JSON.stringify({folio,fecha,entrega,recibe,destino}));
 
+      // Redirigir a pantalla2
+      window.location.href = "pantalla2.html";
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      cargarFolio();
-      ponerFechaHoy();
-    });
+    // 👇 Hacer accesible la función para el botón
+    window.guardarDatos = guardarDatos;
   </script>
 </body>
 </html>
