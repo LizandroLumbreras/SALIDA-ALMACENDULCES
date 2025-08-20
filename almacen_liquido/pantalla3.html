@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pantalla 3 – Carrito (Líquido)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    body{font-family:'Poppins',sans-serif;background:linear-gradient(to right,#00416A,#E4E5E6);margin:0;min-height:100vh}
+    .contenedor{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.2);margin-top:30px}
+    table{width:100%;border-collapse:collapse;margin-top:20px}
+    th,td{border:1px solid #ccc;padding:8px;text-align:center}
+    th{background:#00416A;color:#fff}
+    input[type="number"]{width:70px;padding:4px}
+    button{padding:6px 12px;margin:2px;background:#0c6cbd;border:none;border-radius:6px;color:#fff;cursor:pointer}
+    button:hover{background:#0a4e8c}
+    .acciones{display:flex;gap:4px;justify-content:center}
+    .footer-btn{margin-top:20px;display:flex;justify-content:space-between}
+    .footer-btn button{flex:1;margin:5px}
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h2>Carrito de Productos – Almacén Líquido</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Producto</th>
+          <th>Unidad</th>
+          <th>Cantidad</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaCarrito"></tbody>
+    </table>
+
+    <div class="footer-btn">
+      <button onclick="limpiarCarrito()">🗑️ Vaciar Carrito</button>
+      <button onclick="continuar()">➡️ Continuar</button>
+    </div>
+  </div>
+
+  <script>
+    let carrito = JSON.parse(localStorage.getItem("carrito_liquido")) || [];
+
+    function renderCarrito(){
+      const tbody = document.getElementById("tablaCarrito");
+      tbody.innerHTML = "";
+
+      carrito.forEach((p, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p["Codigo Barra"]||""}</td>
+          <td>${p.Descripcion||""}</td>
+          <td>${p.Unidad||""}</td>
+          <td><input type="number" min="1" value="${p.cantidad}" onchange="cambiarCantidad(${index}, this.value)"></td>
+          <td class="acciones">
+            <button onclick="eliminar(${index})">❌ Eliminar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function cambiarCantidad(index, nuevaCant){
+      carrito[index].cantidad = parseInt(nuevaCant);
+      localStorage.setItem("carrito_liquido", JSON.stringify(carrito));
+      renderCarrito();
+    }
+
+    function eliminar(index){
+      carrito.splice(index,1);
+      localStorage.setItem("carrito_liquido", JSON.stringify(carrito));
+      renderCarrito();
+    }
+
+    function limpiarCarrito(){
+      if(confirm("¿Vaciar todo el carrito?")){
+        carrito = [];
+        localStorage.setItem("carrito_liquido", JSON.stringify(carrito));
+        renderCarrito();
+      }
+    }
+
+    function continuar(){
+      if(carrito.length === 0){
+        alert("Agrega productos antes de continuar.");
+        return;
+      }
+      window.location.href = "pantalla4.html";
+    }
+
+    // Cargar al iniciar
+    renderCarrito();
+  </script>
+</body>
+</html>

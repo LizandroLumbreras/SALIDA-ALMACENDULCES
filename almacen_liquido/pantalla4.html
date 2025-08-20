@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pantalla 4 – Firmas (Líquido)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    body{font-family:'Poppins',sans-serif;background:linear-gradient(to right,#00416A,#E4E5E6);margin:0;min-height:100vh}
+    .contenedor{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.2);margin-top:30px}
+    label{display:block;margin-top:12px;font-weight:600}
+    input,select{width:100%;padding:8px;margin-top:6px;border:1px solid #ccc;border-radius:6px}
+    canvas{border:1px solid #aaa;border-radius:8px;margin-top:10px;width:100%;height:200px}
+    button{padding:10px 16px;margin:10px 4px;background:#0c6cbd;border:none;border-radius:6px;color:#fff;cursor:pointer}
+    button:hover{background:#0a4e8c}
+    .footer-btn{margin-top:20px;display:flex;justify-content:space-between}
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h2>Registro de Salida – Almacén Líquido</h2>
+
+    <label for="entrega">Entrega:</label>
+    <input type="text" id="entrega" placeholder="Nombre de quien entrega"/>
+
+    <label for="recibe">Recibe:</label>
+    <input type="text" id="recibe" placeholder="Nombre de quien recibe"/>
+
+    <label for="destino">Destino:</label>
+    <select id="destino">
+      <option value="">-- Selecciona --</option>
+      <option value="MATRIZ PISO">MATRIZ PISO</option>
+      <option value="BODEGA ESPECIAS">BODEGA ESPECIAS</option>
+    </select>
+
+    <label for="fecha">Fecha:</label>
+    <input type="date" id="fecha"/>
+
+    <h3>Firma – Quien Entrega</h3>
+    <canvas id="firmaEntrega"></canvas>
+    <button onclick="limpiarFirma('entrega')">🧹 Limpiar</button>
+
+    <h3>Firma – Quien Recibe</h3>
+    <canvas id="firmaRecibe"></canvas>
+    <button onclick="limpiarFirma('recibe')">🧹 Limpiar</button>
+
+    <div class="footer-btn">
+      <button onclick="volver()">⬅️ Volver</button>
+      <button onclick="continuar()">➡️ Continuar</button>
+    </div>
+  </div>
+
+  <script>
+    // Dibujar firmas en canvas
+    function initFirma(idCanvas, key){
+      const canvas = document.getElementById(idCanvas);
+      const ctx = canvas.getContext("2d");
+      let dibujando = false;
+
+      canvas.addEventListener("mousedown", ()=>dibujando=true);
+      canvas.addEventListener("mouseup", ()=>dibujando=false);
+      canvas.addEventListener("mousemove", dibujar);
+      canvas.addEventListener("touchstart", ()=>dibujando=true);
+      canvas.addEventListener("touchend", ()=>dibujando=false);
+      canvas.addEventListener("touchmove", dibujar);
+
+      function dibujar(e){
+        if(!dibujando) return;
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+        const y = (e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+        ctx.fillStyle="#000";
+        ctx.beginPath();
+        ctx.arc(x,y,2,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    function limpiarFirma(tipo){
+      const canvas = document.getElementById("firma"+tipo.charAt(0).toUpperCase()+tipo.slice(1));
+      canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+    }
+
+    function continuar(){
+      const entrega = document.getElementById("entrega").value.trim();
+      const recibe = document.getElementById("recibe").value.trim();
+      const destino = document.getElementById("destino").value;
+      const fecha = document.getElementById("fecha").value;
+      const firmaEntrega = document.getElementById("firmaEntrega").toDataURL();
+      const firmaRecibe = document.getElementById("firmaRecibe").toDataURL();
+
+      if(!entrega || !recibe || !destino || !fecha){
+        alert("Por favor completa todos los campos.");
+        return;
+      }
+
+      // Guardamos en localStorage
+      localStorage.setItem("datos_liquido", JSON.stringify({
+        entrega, recibe, destino, fecha, firmaEntrega, firmaRecibe
+      }));
+
+      window.location.href = "pantalla5.html";
+    }
+
+    function volver(){
+      window.location.href = "pantalla3.html";
+    }
+
+    // Inicializar firmas
+    initFirma("firmaEntrega","entrega");
+    initFirma("firmaRecibe","recibe");
+  </script>
+</body>
+</html>
