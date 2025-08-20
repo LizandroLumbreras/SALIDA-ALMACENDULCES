@@ -3,63 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Firma – Quien Recibe</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <title>Pantalla 5 – Firma Quien Recibe</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
   <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(to right, #00416A, #E4E5E6);
-      margin: 0;
-      padding: 20px;
-      color: #111;
-      text-align: center;
-    }
-    .contenedor {
-      max-width: 600px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    h2 {
-      color: #00416A;
-      margin-bottom: 20px;
-    }
-    canvas {
-      border: 2px solid #00416A;
-      border-radius: 8px;
-      width: 100%;
-      height: 250px;
-      background: #f9f9f9;
-    }
-    .acciones {
-      margin-top: 20px;
-    }
-    button {
-      padding: 10px 18px;
-      margin: 5px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 15px;
-      font-weight: 600;
-      color: white;
-    }
-    .limpiar { background: #b71c1c; }
-    .guardar { background: #00416A; }
-    button:hover { opacity: 0.9; }
+    body {font-family:'Poppins',sans-serif;background:linear-gradient(to right,#00416A,#E4E5E6);margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center}
+    .contenedor{background:#fff;padding:20px;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.3);max-width:600px;width:90%;text-align:center}
+    canvas{border:1px solid #ccc;border-radius:8px;width:100%;height:250px}
+    button{margin:10px;padding:10px 16px;border:none;border-radius:6px;background:#0c6cbd;color:#fff;cursor:pointer;font-size:16px}
+    button:hover{background:#083d73}
   </style>
 </head>
 <body>
   <div class="contenedor">
-    <h2>Firma de Quien Recibe</h2>
-    <p>Por favor firme en el recuadro:</p>
+    <h2>Firma – Quien Recibe</h2>
     <canvas id="canvasFirma"></canvas>
-    <div class="acciones">
-      <button class="limpiar" onclick="limpiarFirma()">🧹 Limpiar</button>
-      <button class="guardar" onclick="guardarFirma()">✅ Continuar</button>
-    </div>
+    <br>
+    <button onclick="limpiarFirma()">🧹 Limpiar</button>
+    <button onclick="guardarFirma()">✅ Finalizar</button>
   </div>
 
   <script>
@@ -67,71 +27,42 @@
     const ctx = canvas.getContext("2d");
     let dibujando = false;
 
-    function ajustarCanvas() {
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = 250;
-      ctx.fillStyle = "#f9f9f9";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    window.onload = ajustarCanvas;
-    window.onresize = ajustarCanvas;
-
-    function empezarDibujo(e) {
-      dibujando = true;
-      ctx.beginPath();
-      ctx.moveTo(e.offsetX, e.offsetY);
-    }
-    function dibujar(e) {
-      if (!dibujando) return;
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
-      ctx.strokeStyle = "#000";
-      ctx.lineTo(e.offsetX, e.offsetY);
-      ctx.stroke();
-    }
-    function terminarDibujo() {
-      dibujando = false;
-      ctx.closePath();
-    }
-
-    canvas.addEventListener("mousedown", empezarDibujo);
+    canvas.addEventListener("mousedown", () => dibujando = true);
+    canvas.addEventListener("mouseup", () => dibujando = false);
     canvas.addEventListener("mousemove", dibujar);
-    canvas.addEventListener("mouseup", terminarDibujo);
-    canvas.addEventListener("mouseleave", terminarDibujo);
 
-    // táctil
-    canvas.addEventListener("touchstart", e => {
-      e.preventDefault();
-      dibujando = true;
+    canvas.addEventListener("touchstart", e => {dibujando = true;});
+    canvas.addEventListener("touchend", e => {dibujando = false;});
+    canvas.addEventListener("touchmove", dibujarTouch);
+
+    function dibujar(e){
+      if(!dibujando) return;
+      ctx.fillStyle = "black";
       ctx.beginPath();
-      ctx.moveTo(e.touches[0].clientX - canvas.getBoundingClientRect().left,
-                 e.touches[0].clientY - canvas.getBoundingClientRect().top);
-    });
-    canvas.addEventListener("touchmove", e => {
-      e.preventDefault();
-      if (!dibujando) return;
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
-      ctx.strokeStyle = "#000";
-      ctx.lineTo(e.touches[0].clientX - canvas.getBoundingClientRect().left,
-                 e.touches[0].clientY - canvas.getBoundingClientRect().top);
-      ctx.stroke();
-    });
-    canvas.addEventListener("touchend", () => { dibujando = false; });
-
-    function limpiarFirma() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#f9f9f9";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.arc(e.offsetX, e.offsetY, 2, 0, Math.PI*2);
+      ctx.fill();
     }
 
-    function guardarFirma() {
-      const firma = canvas.toDataURL("image/png");
-      localStorage.setItem("firmaRecibeLiquidos", firma);
-      alert("✅ Firma guardada. Pasando al resumen final...");
-      // 👉 Redirige al resumen
-      window.location.href = "pantalla6-resumen.html";
+    function dibujarTouch(e){
+      if(!dibujando) return;
+      let rect = canvas.getBoundingClientRect();
+      let touch = e.touches[0];
+      let x = touch.clientX - rect.left;
+      let y = touch.clientY - rect.top;
+      ctx.fillStyle = "black";
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    function limpiarFirma(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+    }
+
+    function guardarFirma(){
+      const dataURL = canvas.toDataURL();
+      localStorage.setItem("firmaRecibeLiquidos", dataURL);
+      window.location.href="pantalla6.html";
     }
   </script>
 </body>
