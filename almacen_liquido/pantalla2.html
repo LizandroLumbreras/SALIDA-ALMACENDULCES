@@ -20,7 +20,7 @@
   <div class="contenedor">
     <h2>Buscar Productos – Almacén Líquido</h2>
 
-    <input type="text" id="buscador" placeholder="Escribe código o nombre del producto..." oninput="buscarProducto()"/>
+    <input type="text" id="buscador" placeholder="Escribe código o nombre del producto..." oninput="buscarProducto(this.value)"/>
 
     <table>
       <thead>
@@ -52,20 +52,30 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // === Buscar producto ===
+  // === Buscar producto (código o nombre) ===
   window.buscarProducto = async function (texto) {
-    const tabla = document.getElementById("tablaProductos");
+    const tabla = document.getElementById("tablaResultados");
     tabla.innerHTML = "";
 
     if (!texto.trim()) return;
 
     try {
-      // 🔍 Buscar en colección productos
-      const q = query(
-        collection(db, "productos"),
-        where("Nombre", ">=", texto.toUpperCase()),
-        where("Nombre", "<=", texto.toUpperCase() + "\uf8ff")
-      );
+      let q;
+
+      if (/^\d+$/.test(texto.trim())) {
+        // 🔍 Buscar por Código de Barra (solo números)
+        q = query(
+          collection(db, "productos"),
+          where("Codigo Barra", "==", texto.trim())
+        );
+      } else {
+        // 🔍 Buscar por Nombre
+        q = query(
+          collection(db, "productos"),
+          where("Nombre", ">=", texto.toUpperCase()),
+          where("Nombre", "<=", texto.toUpperCase() + "\uf8ff")
+        );
+      }
 
       const snap = await getDocs(q);
 
