@@ -95,73 +95,70 @@
     <button onclick="guardarDatos()">Guardar y continuar</button>
   </div>
 
-  <!-- Firebase -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+ <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
-      authDomain: "inventariopv-643f1.firebaseapp.com",
-      projectId: "inventariopv-643f1",
-      storageBucket: "inventariopv-643f1.appspot.com",
-      messagingSenderId: "96242533231",
-      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
-    };
+  // 🔹 Configuración Firebase (ya integrada)
+  const firebaseConfig = {
+    apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
+    authDomain: "inventariopv-643f1.firebaseapp.com",
+    projectId: "inventariopv-643f1",
+    storageBucket: "inventariopv-643f1.firebasestorage.app",
+    messagingSenderId: "96242533231",
+    appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  // 🔹 Inicializar Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    // 🔹 Cargar folio
-    async function cargarFolio() {
-      const ref = doc(db, "consecutivos", "salidas_liquido");
-      const snap = await getDoc(ref);
-      let num = 1;
-      if (snap.exists()) num = snap.data().ultimo + 1;
-      document.getElementById("folio").value = "SAL-LIQ-" + String(num).padStart(4, "0");
+  // === Al cargar la página ===
+  window.addEventListener("DOMContentLoaded", () => {
+    // Generar folio consecutivo
+    let folioNum = localStorage.getItem("folioLiquidos") || 1;
+    const folioTxt = "SAL-LIQ-" + String(folioNum).padStart(4, "0");
+    document.getElementById("folio").value = folioTxt;
+
+    // Fijar fecha actual
+    const hoy = new Date().toISOString().split("T")[0];
+    document.getElementById("fecha").value = hoy;
+  });
+
+  // === Guardar en Firestore y LocalStorage ===
+  async function guardarDatos() {
+    const folio = document.getElementById("folio").value;
+    const fecha = document.getElementById("fecha").value;
+    const entrega = document.getElementById("entrega").value;
+    const recibe = document.getElementById("recibe").value;
+    const destino = document.getElementById("destino").value;
+
+    if (!folio || !fecha || !entrega || !recibe || !destino) {
+      alert("⚠️ Por favor complete todos los campos.");
+      return;
     }
 
-    // 🔹 Poner fecha actual
-    function ponerFechaHoy() {
-      const hoy = new Date();
-      const yyyy = hoy.getFullYear();
-      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
-      const dd = String(hoy.getDate()).padStart(2, '0');
-      document.getElementById("fecha").value = `${yyyy}-${mm}-${dd}`;
+    try {
+      await setDoc(doc(db, "almacenes/Almacen_Liquidos/salidas_temp", folio), {
+        folio, fecha, entrega, recibe, destino
+      });
+      console.log("✅ Datos guardados en Firestore");
+    } catch (e) {
+      console.error("❌ Error al guardar:", e);
     }
 
-    // 🔹 Guardar datos y continuar
-    async function guardarDatos() {
-      const folio = document.getElementById("folio").value;
-      const fecha = document.getElementById("fecha").value;
-      const entrega = document.getElementById("entrega").value.trim();
-      const recibe = document.getElementById("recibe").value.trim();
-      const destino = document.getElementById("destino").value.trim();
+    // Actualizar consecutivo
+    let folioNum = parseInt(localStorage.getItem("folioLiquidos") || 1);
+    localStorage.setItem("folioLiquidos", folioNum + 1);
 
-      if (!folio || !fecha || !entrega || !recibe || !destino) {
-        alert("Completa todos los campos.");
-        return;
-      }
-   // Guardar en Firestore
-      try {
-        await setDoc(doc(db, "almacenes/Almacen_Liquidos/salidas_temp", folio), {
-          folio, fecha, entrega, recibe, destino
-        });
-        console.log("✅ Datos guardados en Firestore");
-      } catch (e) {
-        console.error("❌ Error al guardar:", e);
-      }
+    // Guardar en localStorage
+    localStorage.setItem("salidaLiquidos", JSON.stringify({folio,fecha,entrega,recibe,destino}));
 
-      // Guardar también en localStorage para usar en pantalla2.html
-      localStorage.setItem("folioLiquidos", parseInt(folioNum)+1);
-      localStorage.setItem("salidaLiquidos", JSON.stringify({folio,fecha,entrega,recibe,destino}));
+    // Ir a la pantalla 2
+    window.location.href = "pantalla2.html";
+  }
 
-      // Redirigir a pantalla2
-      window.location.href = "pantalla2.html";
-    }
-
-    // 👇 Hacer accesible la función para el botón
-    window.guardarDatos = guardarDatos;
-  </script>
+  window.guardarDatos = guardarDatos;
+</script>
 </body>
 </html>
