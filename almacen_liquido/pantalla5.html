@@ -3,132 +3,136 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pantalla 5 – Resumen (Líquido)</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
+  <title>Firma – Quien Recibe</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body{font-family:'Poppins',sans-serif;background:#f5f5f5;margin:0;padding:20px}
-    .contenedor{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.2)}
-    h2{text-align:center;color:#00416A}
-    table{width:100%;border-collapse:collapse;margin-top:15px}
-    th,td{border:1px solid #ccc;padding:6px;text-align:center}
-    th{background:#00416A;color:#fff}
-    .firmas{display:flex;justify-content:space-between;margin-top:20px;flex-wrap:wrap}
-    .firmas div{text-align:center;width:45%}
-    .firmas img{border:1px solid #ccc;border-radius:8px;max-width:100%;height:120px;object-fit:contain}
-    button{padding:10px 16px;margin:10px 4px;background:#0c6cbd;border:none;border-radius:6px;color:#fff;cursor:pointer}
-    button:hover{background:#0a4e8c}
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to right, #00416A, #E4E5E6);
+      margin: 0;
+      padding: 20px;
+      color: #111;
+      text-align: center;
+    }
+    .contenedor {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    h2 {
+      color: #00416A;
+      margin-bottom: 20px;
+    }
+    canvas {
+      border: 2px solid #00416A;
+      border-radius: 8px;
+      width: 100%;
+      height: 250px;
+      background: #f9f9f9;
+    }
+    .acciones {
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 18px;
+      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+    }
+    .limpiar { background: #b71c1c; }
+    .guardar { background: #00416A; }
+    button:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
   <div class="contenedor">
-    <h2>Resumen Final – Almacén Líquido</h2>
-
-    <div id="info"></div>
-
-    <table id="tablaProductos">
-      <thead>
-        <tr>
-          <th>Código</th>
-          <th>Descripción</th>
-          <th>Cantidad</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <div class="firmas">
-      <div>
-        <p>Firma – Quien Entrega</p>
-        <img id="imgEntrega"/>
-      </div>
-      <div>
-        <p>Firma – Quien Recibe</p>
-        <img id="imgRecibe"/>
-      </div>
-    </div>
-
-    <div style="margin-top:20px;text-align:center">
-      <button onclick="guardar()">💾 Guardar y Descargar Ticket</button>
+    <h2>Firma de Quien Recibe</h2>
+    <p>Por favor firme en el recuadro:</p>
+    <canvas id="canvasFirma"></canvas>
+    <div class="acciones">
+      <button class="limpiar" onclick="limpiarFirma()">🧹 Limpiar</button>
+      <button class="guardar" onclick="guardarFirma()">✅ Continuar</button>
     </div>
   </div>
 
-  <!-- Firebase -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  <script>
+    const canvas = document.getElementById("canvasFirma");
+    const ctx = canvas.getContext("2d");
+    let dibujando = false;
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
-      authDomain: "inventariopv-643f1.firebaseapp.com",
-      projectId: "inventariopv-643f1",
-      storageBucket: "inventariopv-643f1.appspot.com",
-      messagingSenderId: "96242533231",
-      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
-    };
+    function ajustarCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = 250;
+      ctx.fillStyle = "#f9f9f9";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    window.onload = ajustarCanvas;
+    window.onresize = ajustarCanvas;
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const datos = JSON.parse(localStorage.getItem("datos_liquido")) || {};
-    const productos = JSON.parse(localStorage.getItem("carrito_liquido")) || [];
-
-    document.getElementById("info").innerHTML = `
-      <p><strong>Entrega:</strong> ${datos.entrega}</p>
-      <p><strong>Recibe:</strong> ${datos.recibe}</p>
-      <p><strong>Destino:</strong> ${datos.destino}</p>
-      <p><strong>Fecha:</strong> ${datos.fecha}</p>
-    `;
-
-    const tbody = document.querySelector("#tablaProductos tbody");
-    productos.forEach(p=>{
-      const tr=document.createElement("tr");
-      tr.innerHTML=`<td>${p.codigo}</td><td>${p.descripcion}</td><td>${p.cantidad}</td>`;
-      tbody.appendChild(tr);
-    });
-
-    document.getElementById("imgEntrega").src = datos.firmaEntrega;
-    document.getElementById("imgRecibe").src = datos.firmaRecibe;
-
-    async function guardar(){
-      try{
-        // Guardar en Firebase
-        await addDoc(collection(db,"almacenes","almacen_liquido","salidas"),{
-          ...datos,
-          productos,
-          fechaGuardado:new Date().toISOString()
-        });
-
-        // Generar ticket en texto
-        let ticket="*** La Proveedora ***\n";
-        ticket+="SALIDA – ALMACÉN LÍQUIDO\n\n";
-        ticket+=`Folio: ${Date.now()}\n`;
-        ticket+=`Entrega: ${datos.entrega}\n`;
-        ticket+=`Recibe: ${datos.recibe}\n`;
-        ticket+=`Destino: ${datos.destino}\n`;
-        ticket+=`Fecha: ${datos.fecha}\n\n`;
-        ticket+="PRODUCTOS:\n";
-        productos.forEach(p=>{
-          ticket+=`${p.cantidad} x ${p.descripcion}\n`;
-        });
-        ticket+="\n✅ Registro guardado en Firebase";
-
-        // Descargar archivo .txt
-        const blob = new Blob([ticket], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `ticket_salida_${Date.now()}.txt`;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        alert("✅ Salida guardada y ticket descargado");
-      }catch(err){
-        console.error(err);
-        alert("❌ Error al guardar en Firebase");
-      }
+    function empezarDibujo(e) {
+      dibujando = true;
+      ctx.beginPath();
+      ctx.moveTo(e.offsetX, e.offsetY);
+    }
+    function dibujar(e) {
+      if (!dibujando) return;
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#000";
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
+    }
+    function terminarDibujo() {
+      dibujando = false;
+      ctx.closePath();
     }
 
-    window.guardar=guardar;
+    canvas.addEventListener("mousedown", empezarDibujo);
+    canvas.addEventListener("mousemove", dibujar);
+    canvas.addEventListener("mouseup", terminarDibujo);
+    canvas.addEventListener("mouseleave", terminarDibujo);
+
+    // táctil
+    canvas.addEventListener("touchstart", e => {
+      e.preventDefault();
+      dibujando = true;
+      ctx.beginPath();
+      ctx.moveTo(e.touches[0].clientX - canvas.getBoundingClientRect().left,
+                 e.touches[0].clientY - canvas.getBoundingClientRect().top);
+    });
+    canvas.addEventListener("touchmove", e => {
+      e.preventDefault();
+      if (!dibujando) return;
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#000";
+      ctx.lineTo(e.touches[0].clientX - canvas.getBoundingClientRect().left,
+                 e.touches[0].clientY - canvas.getBoundingClientRect().top);
+      ctx.stroke();
+    });
+    canvas.addEventListener("touchend", () => { dibujando = false; });
+
+    function limpiarFirma() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#f9f9f9";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function guardarFirma() {
+      const firma = canvas.toDataURL("image/png");
+      localStorage.setItem("firmaRecibeLiquidos", firma);
+      alert("✅ Firma guardada. Pasando al resumen final...");
+      // 👉 Redirige al resumen
+      window.location.href = "pantalla6-resumen.html";
+    }
   </script>
 </body>
 </html>
