@@ -68,7 +68,8 @@
     <h2>Buscar y Agregar Productos – Almacén Líquidos</h2>
 
     <!-- Buscador -->
-    <input type="text" id="buscador" placeholder="Buscar por código o nombre..." oninput="buscarProducto()">
+    <input type="text" id="buscador" placeholder="Buscar por código o nombre..."
+           oninput="buscarProducto()" onkeypress="if(event.key==='Enter'){buscarProducto()}">
 
     <!-- Resultados -->
     <table>
@@ -114,18 +115,36 @@
       querySnapshot.forEach(doc => {
         productos.push(doc.data());
       });
+      console.log("✅ Productos cargados:", productos.length);
     }
 
     // Buscar producto
     window.buscarProducto = function () {
-      const texto = document.getElementById("buscador").value.toLowerCase();
-      const resultados = productos.filter(p =>
-        p["Codigo Barra"]?.toString().includes(texto) ||
-        p.Descripcion?.toLowerCase().includes(texto)
-      );
-
+      const texto = document.getElementById("buscador").value.trim().toLowerCase();
       const tabla = document.getElementById("tablaResultados");
       tabla.innerHTML = "";
+
+      if (!texto) return;
+
+      let resultados = [];
+
+      // Si es número largo → buscar exacto
+      if (!isNaN(texto) && texto.length >= 6) {
+        resultados = productos.filter(p =>
+          p["Codigo Barra"]?.toString() === texto
+        );
+      } else {
+        // Si es texto → buscar parcial
+        resultados = productos.filter(p =>
+          p["Codigo Barra"]?.toString().includes(texto) ||
+          p.Descripcion?.toLowerCase().includes(texto)
+        );
+      }
+
+      if (resultados.length === 0) {
+        tabla.innerHTML = `<tr><td colspan="5">❌ Producto no encontrado</td></tr>`;
+        return;
+      }
 
       resultados.forEach(prod => {
         const fila = document.createElement("tr");
@@ -163,7 +182,9 @@
       window.location.href = "pantalla3.html";
     };
 
+    // Inicializar carga
     cargarProductos();
   </script>
 </body>
 </html>
+
