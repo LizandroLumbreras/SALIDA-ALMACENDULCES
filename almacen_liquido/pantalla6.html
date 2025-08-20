@@ -2,86 +2,32 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resumen Final - Almacén Líquidos</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <title>Resumen Final – Almacén Líquidos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
   <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(to right, #00416A, #E4E5E6);
-      padding: 20px;
-      margin: 0;
-      min-height: 100vh;
-    }
-    .contenedor {
-      background: #fff;
-      border-radius: 10px;
-      padding: 20px;
-      max-width: 900px;
-      margin: auto;
-      box-shadow: 0 3px 10px rgba(0,0,0,.2);
-    }
-    h2 {
-      text-align: center;
-      color: #00416A;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background: #00416A;
-      color: white;
-    }
-    .firmas {
-      display: flex;
-      justify-content: space-around;
-      margin-top: 20px;
-      flex-wrap: wrap;
-    }
-    .firma-box {
-      text-align: center;
-      margin: 10px;
-    }
-    .firma-box img {
-      border: 1px solid #ccc;
-      width: 220px;
-      height: 120px;
-    }
-    button {
-      display: block;
-      margin: 25px auto 0;
-      background: #00416A;
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      font-size: 16px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #036;
-    }
+    body{font-family:Poppins,sans-serif;background:linear-gradient(to right,#00416A,#E4E5E6);margin:0;padding:20px}
+    .contenedor{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+    h2{text-align:center;color:#00416A}
+    table{width:100%;border-collapse:collapse;margin-top:20px}
+    th,td{border:1px solid #ccc;padding:8px;text-align:center}
+    th{background:#00416A;color:#fff}
+    .firmas{display:flex;justify-content:space-around;margin-top:30px;flex-wrap:wrap}
+    .firma-box{text-align:center}
+    button{background:#00416A;color:white;border:none;padding:10px 20px;border-radius:6px;margin-top:20px;cursor:pointer}
   </style>
 </head>
 <body>
   <div class="contenedor">
     <h2>Resumen Final – Almacén Líquidos</h2>
 
-    <p>Folio: <span id="folio"></span></p>
-    <p>Fecha: <span id="fecha"></span></p>
-    <p>Destino: <span id="destino"></span></p>
-    <p>Entrega: <span id="entrega"></span></p>
-    <p>Recibe: <span id="recibe"></span></p>
+    <p id="folio"></p>
+    <p id="fecha"></p>
+    <p id="destino"></p>
+    <p id="entrega"></p>
+    <p id="recibe"></p>
 
     <h3>Productos</h3>
-    <table>
+    <table id="tablaProductos">
       <thead>
         <tr>
           <th>Código</th>
@@ -89,29 +35,29 @@
           <th>Cantidad</th>
         </tr>
       </thead>
-      <tbody id="tabla-productos"></tbody>
+      <tbody></tbody>
     </table>
 
     <div class="firmas">
       <div class="firma-box">
         <p>Firma – Quien Entrega</p>
-        <img id="firmaEntregaImg">
+        <img id="firmaEntrega" width="200">
       </div>
       <div class="firma-box">
         <p>Firma – Quien Recibe</p>
-        <img id="firmaRecibeImg">
+        <img id="firmaRecibe" width="200">
       </div>
     </div>
 
-    <button id="guardar">Guardar en Firebase</button>
+    <div style="text-align:center">
+      <button id="guardarBtn">Guardar en Firebase</button>
+    </div>
   </div>
 
-  <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Configuración Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
       authDomain: "inventariopv-643f1.firebaseapp.com",
@@ -124,58 +70,62 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Recuperar y mostrar info
-    document.addEventListener("DOMContentLoaded", () => {
-      const folio = localStorage.getItem("folio") || "";
-      const fecha = localStorage.getItem("fecha") || "";
-      const destino = localStorage.getItem("destino") || "";
-      const entrega = localStorage.getItem("entrega") || "";
-      const recibe = localStorage.getItem("recibe") || "";
-      const productos = JSON.parse(localStorage.getItem("productos")) || [];
-      const firmaEntrega = localStorage.getItem("firmaEntrega");
-      const firmaRecibe = localStorage.getItem("firmaRecibe");
+    // 📌 Recuperar datos de localStorage
+    const folioNum = localStorage.getItem("folioNum");
+    const fecha = localStorage.getItem("fecha");
+    const destino = localStorage.getItem("destino");
+    const entrega = localStorage.getItem("entrega");
+    const recibe = localStorage.getItem("recibe");
+    const productos = JSON.parse(localStorage.getItem("productos") || "[]");
+    const firmaEntrega = localStorage.getItem("firmaEntrega");
+    const firmaRecibe = localStorage.getItem("firmaRecibe");
 
-      document.getElementById("folio").textContent = folio;
-      document.getElementById("fecha").textContent = fecha;
-      document.getElementById("destino").textContent = destino;
-      document.getElementById("entrega").textContent = entrega;
-      document.getElementById("recibe").textContent = recibe;
+    // 📌 Mostrar en pantalla
+    document.getElementById("folio").innerText = "Folio: SALDULQ - " + String(folioNum).padStart(4,"0");
+    document.getElementById("fecha").innerText = "Fecha: " + fecha;
+    document.getElementById("destino").innerText = "Destino: " + destino;
+    document.getElementById("entrega").innerText = "Entrega: " + entrega;
+    document.getElementById("recibe").innerText = "Recibe: " + recibe;
 
-      const tabla = document.getElementById("tabla-productos");
-      productos.forEach(p => {
-        let fila = document.createElement("tr");
-        fila.innerHTML = `
-          <td>${p.codigo}</td>
-          <td>${p.descripcion}</td>
-          <td>${p.cantidad}</td>
-        `;
-        tabla.appendChild(fila);
-      });
+    const tbody = document.querySelector("#tablaProductos tbody");
+    productos.forEach(p=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${p.codigo}</td><td>${p.descripcion}</td><td>${p.cantidad}</td>`;
+      tbody.appendChild(tr);
+    });
 
-      if(firmaEntrega) document.getElementById("firmaEntregaImg").src = firmaEntrega;
-      if(firmaRecibe) document.getElementById("firmaRecibeImg").src = firmaRecibe;
+    if(firmaEntrega) document.getElementById("firmaEntrega").src = firmaEntrega;
+    if(firmaRecibe) document.getElementById("firmaRecibe").src = firmaRecibe;
 
-      // Guardar en Firebase
-      document.getElementById("guardar").addEventListener("click", async () => {
-        try {
-          await addDoc(collection(db, "almacenes", "almacen_liquidos", "salidas"), {
-            folio,
-            fecha,
-            destino,
-            entrega,
-            recibe,
-            productos,
-            firmaEntrega,
-            firmaRecibe,
-            timestamp: serverTimestamp()
-          });
-          alert("✅ Registro guardado en Firebase correctamente");
-          localStorage.clear();
-        } catch (e) {
-          console.error("Error guardando: ", e);
-          alert("❌ Error al guardar en Firebase");
+    // 📌 Guardar en Firebase
+    document.getElementById("guardarBtn").addEventListener("click", async()=>{
+      try {
+        await addDoc(collection(db,"almacenes","Almacen_Liquidos","salidas"),{
+          folio:"SALDULQ - "+String(folioNum).padStart(4,"0"),
+          fecha,
+          destino,
+          entrega,
+          recibe,
+          productos,
+          firmaEntrega,
+          firmaRecibe,
+          timestamp:new Date()
+        });
+
+        // Actualizar consecutivo en "consecutivos/salidas_liquidos"
+        const docRef = doc(db,"consecutivos","salidas_liquidos");
+        const snap = await getDoc(docRef);
+        if(snap.exists()){
+          await updateDoc(docRef,{ valor: folioNum });
+        }else{
+          await setDoc(docRef,{ valor: folioNum });
         }
-      });
+
+        alert("Salida guardada en Firebase ✔");
+      }catch(e){
+        console.error("Error al guardar:",e);
+        alert("Error al guardar en Firebase ❌");
+      }
     });
   </script>
 </body>
