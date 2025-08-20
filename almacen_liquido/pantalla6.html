@@ -2,69 +2,72 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <title>Resumen Final - Salida Líquidos</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resumen Final – Almacén Líquidos</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    body{font-family:'Poppins',sans-serif;background:linear-gradient(to right,#00416A,#E4E5E6);margin:0;padding:20px;min-height:100vh}
-    .contenedor{max-width:950px;margin:auto;background:#fff;padding:25px;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.2)}
-    h2{text-align:center;color:#00416A}
-    table{width:100%;border-collapse:collapse;margin-top:20px}
-    th,td{border:1px solid #ccc;padding:8px;text-align:center}
-    th{background:#00416A;color:#fff}
-    .firmas{display:flex;justify-content:space-around;margin-top:30px;flex-wrap:wrap}
-    .firma-box{text-align:center;margin:10px}
-    .firma-box img{max-width:220px;max-height:120px;border:1px solid #ccc;padding:5px}
-    .acciones{margin-top:25px;text-align:center}
-    button{padding:10px 16px;border:none;border-radius:6px;cursor:pointer;font-size:16px;margin:5px}
-    .btn-prim{background:#0c6cbd;color:#fff}
-    .btn-prim:hover{background:#093c6d}
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to right,#00416A,#E4E5E6);
+      margin: 0; padding: 20px;
+    }
+    .contenedor {
+      background: #fff; border-radius: 12px;
+      padding: 20px; max-width: 900px; margin: auto;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    h2 { text-align: center; color:#00416A; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background:#00416A; color:white; }
+    .firmas { display:flex; justify-content: space-around; margin-top:20px; flex-wrap:wrap; }
+    .firma-box { text-align: center; margin:10px; }
+    .firma-box img { border:1px solid #aaa; border-radius:8px; max-width:200px; max-height:120px; }
+    button {
+      padding:12px 20px; border:none; border-radius:8px;
+      margin:10px; cursor:pointer; font-size:16px; color:#fff;
+      background:#0c6cbd;
+    }
   </style>
 </head>
 <body>
   <div class="contenedor">
-    <h2>📋 Resumen Final – Almacén Líquidos</h2>
-
+    <h2>Resumen Final – Salida de Almacén Líquidos</h2>
     <div id="infoBasica"></div>
 
-    <table>
+    <table id="tablaProductos">
       <thead>
-        <tr>
-          <th>Código</th>
-          <th>Producto</th>
-          <th>Unidad</th>
-          <th>Cantidad</th>
-        </tr>
+        <tr><th>Código</th><th>Descripción</th><th>Cantidad</th></tr>
       </thead>
-      <tbody id="tablaProductos"></tbody>
+      <tbody></tbody>
     </table>
 
     <div class="firmas">
       <div class="firma-box">
-        <h4>Firma de quien entrega</h4>
+        <p>Firma Quien Entrega</p>
         <img id="firmaEntrega" alt="Firma entrega">
-        <p id="nombreEntrega"></p>
       </div>
       <div class="firma-box">
-        <h4>Firma de quien recibe</h4>
+        <p>Firma Quien Recibe</p>
         <img id="firmaRecibe" alt="Firma recibe">
-        <p id="nombreRecibe"></p>
       </div>
     </div>
 
-    <div class="acciones">
-      <button class="btn-prim" onclick="guardarSalida()">💾 Guardar y Descargar</button>
+    <div style="text-align:center;margin-top:20px;">
+      <button onclick="guardarYDescargar()">💾 Guardar y Descargar PDF</button>
     </div>
   </div>
 
-  <!-- Firebase -->
+  <!-- Firebase + lógica -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { jsPDF } from "jspdf";
 
-    // 🔹 Configuración Firebase
+    // 🔹 CONFIGURA TU FIREBASE
     const firebaseConfig = {
-      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
+      apiKey: "TU_API_KEY",
       authDomain: "inventariopv-643f1.firebaseapp.com",
       projectId: "inventariopv-643f1",
       storageBucket: "inventariopv-643f1.appspot.com",
@@ -75,84 +78,84 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 🔹 Cargar datos desde localStorage
-    function cargarResumen(){
-      const datos = JSON.parse(localStorage.getItem("datosLiquidos")) || {};
-      const carrito = JSON.parse(localStorage.getItem("carritoLiquidos")) || [];
-      const firmaEntrega = localStorage.getItem("firmaEntregaLiquidos");
-      const firmaRecibe = localStorage.getItem("firmaRecibeLiquidos");
+    // Datos desde localStorage
+    const folio   = localStorage.getItem("folio_liquidos") || "N/A";
+    const fecha   = localStorage.getItem("fecha_liquidos") || new Date().toLocaleString();
+    const entrega = localStorage.getItem("entrega_liquidos") || "N/A";
+    const recibe  = localStorage.getItem("recibe_liquidos") || "N/A";
+    const destino = localStorage.getItem("destino_liquidos") || "N/A";
+    const productos = JSON.parse(localStorage.getItem("productos_liquidos") || "[]");
 
-      // Datos básicos
-      document.getElementById("infoBasica").innerHTML = `
-        <p><b>Folio:</b> ${datos.folio || "N/A"}</p>
-        <p><b>Fecha:</b> ${datos.fecha || new Date().toLocaleString()}</p>
-        <p><b>Destino:</b> ${datos.destino || ""}</p>
-        <p><b>Entrega:</b> ${datos.entrega || ""}</p>
-        <p><b>Recibe:</b> ${datos.recibe || ""}</p>
-      `;
+    document.getElementById("infoBasica").innerHTML = `
+      <p><b>Folio:</b> ${folio}</p>
+      <p><b>Fecha:</b> ${fecha}</p>
+      <p><b>Entrega:</b> ${entrega}</p>
+      <p><b>Recibe:</b> ${recibe}</p>
+      <p><b>Destino:</b> ${destino}</p>
+    `;
 
-      // Productos
-      const tbody = document.getElementById("tablaProductos");
-      if(carrito.length === 0){
-        tbody.innerHTML = "<tr><td colspan='4'>No hay productos</td></tr>";
-      } else {
-        tbody.innerHTML = carrito.map(p => `
-          <tr>
-            <td>${p.codigoBarra}</td>
-            <td>${p.concepto}</td>
-            <td>${p.unidad || ""}</td>
-            <td>${p.cantidad || 1}</td>
-          </tr>
-        `).join("");
-      }
+    const tbody = document.querySelector("#tablaProductos tbody");
+    productos.forEach(p => {
+      const fila = document.createElement("tr");
+      fila.innerHTML = `<td>${p.codigo}</td><td>${p.descripcion}</td><td>${p.cantidad}</td>`;
+      tbody.appendChild(fila);
+    });
 
-      // Firmas
-      if(firmaEntrega){
-        document.getElementById("firmaEntrega").src = firmaEntrega;
-        document.getElementById("nombreEntrega").innerText = datos.entrega || "";
-      }
-      if(firmaRecibe){
-        document.getElementById("firmaRecibe").src = firmaRecibe;
-        document.getElementById("nombreRecibe").innerText = datos.recibe || "";
-      }
-    }
+    document.getElementById("firmaEntrega").src = localStorage.getItem("firma_entrega_liquidos") || "";
+    document.getElementById("firmaRecibe").src  = localStorage.getItem("firma_recibe_liquidos") || "";
 
-    // 🔹 Guardar en Firebase
-    async function guardarSalida(){
+    // 🔹 Función Guardar y Descargar
+    window.guardarYDescargar = async function() {
       try {
-        const datos = JSON.parse(localStorage.getItem("datosLiquidos")) || {};
-        const carrito = JSON.parse(localStorage.getItem("carritoLiquidos")) || [];
-        const firmaEntrega = localStorage.getItem("firmaEntregaLiquidos");
-        const firmaRecibe = localStorage.getItem("firmaRecibeLiquidos");
-
-        if(carrito.length === 0){
-          alert("⚠️ No hay productos para guardar");
-          return;
-        }
-
-        const docRef = await addDoc(collection(db, "almacenes/almacen_liquidos/salidas"), {
-          ...datos,
-          productos: carrito,
-          firmaEntrega,
-          firmaRecibe,
-          fechaRegistro: serverTimestamp()
+        // Guardar en Firebase
+        await addDoc(collection(db, "almacenes/Almacen_Liquidos/salidas"), {
+          folio, fecha, entrega, recibe, destino,
+          productos,
+          firmaEntrega: localStorage.getItem("firma_entrega_liquidos"),
+          firmaRecibe: localStorage.getItem("firma_recibe_liquidos"),
+          timestamp: serverTimestamp()
         });
 
-        alert("✅ Salida guardada con ID: " + docRef.id);
+        // Crear PDF tipo ticket
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: "mm", format: [80, 200] });
 
-        // limpiar localStorage después de guardar
-        localStorage.removeItem("datosLiquidos");
-        localStorage.removeItem("carritoLiquidos");
-        localStorage.removeItem("firmaEntregaLiquidos");
-        localStorage.removeItem("firmaRecibeLiquidos");
+        doc.setFontSize(12);
+        doc.text("La Proveedora", 40, 10, { align: "center" });
+        doc.setFontSize(10);
+        doc.text(`Folio: ${folio}`, 5, 20);
+        doc.text(`Fecha: ${fecha}`, 5, 25);
+        doc.text(`Entrega: ${entrega}`, 5, 30);
+        doc.text(`Recibe: ${recibe}`, 5, 35);
+        doc.text(`Destino: ${destino}`, 5, 40);
 
+        let y = 50;
+        doc.setFontSize(9);
+        productos.forEach(p => {
+          doc.text(`${p.codigo} - ${p.descripcion} (${p.cantidad})`, 5, y);
+          y += 5;
+        });
+
+        // Firmas
+        const firmaEntrega = localStorage.getItem("firma_entrega_liquidos");
+        const firmaRecibe  = localStorage.getItem("firma_recibe_liquidos");
+
+        if (firmaEntrega) {
+          doc.addImage(firmaEntrega, "PNG", 5, y+5, 30, 15);
+          doc.text("Entrega", 5, y+22);
+        }
+        if (firmaRecibe) {
+          doc.addImage(firmaRecibe, "PNG", 45, y+5, 30, 15);
+          doc.text("Recibe", 45, y+22);
+        }
+
+        doc.save(`Salida_${folio}.pdf`);
+        alert("✅ Guardado en Firebase y PDF descargado");
       } catch (e) {
-        console.error("Error al guardar: ", e);
-        alert("❌ Error al guardar en Firebase");
+        console.error("Error:", e);
+        alert("❌ Error al guardar/descargar");
       }
-    }
-
-    cargarResumen();
+    };
   </script>
 </body>
 </html>
