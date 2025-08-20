@@ -7,12 +7,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
   <style>
     body{font-family:'Poppins',sans-serif;background:linear-gradient(to right,#00416A,#E4E5E6);margin:0;min-height:100vh}
-    .contenedor{max-width:800px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.2);margin-top:30px}
-    input{width:100%;padding:12px;border-radius:8px;border:1px solid #ccc;margin-top:10px}
+    .contenedor{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.2);margin-top:30px}
+    input,button{padding:8px;font-size:15px}
+    input[type="number"]{width:80px;text-align:center}
     table{width:100%;border-collapse:collapse;margin-top:20px}
     th,td{border:1px solid #ccc;padding:8px;text-align:center}
     th{background:#00416A;color:#fff}
-    button{padding:6px 12px;background:#0c6cbd;border:none;border-radius:6px;color:#fff;cursor:pointer}
+    button{background:#0c6cbd;border:none;border-radius:6px;color:#fff;cursor:pointer}
     button:hover{background:#0a4e8c}
   </style>
 </head>
@@ -28,6 +29,7 @@
           <th>Código</th>
           <th>Nombre</th>
           <th>Unidad</th>
+          <th>Cantidad</th>
           <th>Acción</th>
         </tr>
       </thead>
@@ -65,8 +67,7 @@
       snapshot.forEach((doc) => {
         const p = doc.data();
 
-        // Solo productos activos
-        if (p.activo !== true) return;
+        if (p.activo !== true) return; // solo activos
 
         const codigo = p.codigoBarra ? p.codigoBarra.toString() : "";
         const nombre = p.concepto ? p.concepto.toLowerCase() : "";
@@ -85,30 +86,35 @@
     // 🔹 Mostrar resultados en tabla
     window.buscarProducto = async function(texto) {
       const tbody = document.getElementById("tablaResultados");
-      tbody.innerHTML = "<tr><td colspan='4'>Buscando...</td></tr>";
+      tbody.innerHTML = "<tr><td colspan='5'>Buscando...</td></tr>";
 
       const productos = await buscarProductos(texto);
 
       if (productos.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='4'>No se encontraron productos</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='5'>No se encontraron productos</td></tr>";
       } else {
-        tbody.innerHTML = productos.map(p => `
+        tbody.innerHTML = productos.map((p, i) => `
           <tr>
             <td>${p.codigoBarra}</td>
             <td>${p.concepto}</td>
             <td>${p.unidad || ""}</td>
-            <td><button onclick='agregarAlCarrito(${JSON.stringify(p)})'>Agregar</button></td>
+            <td><input type="number" id="cant_${i}" min="1" value="1"></td>
+            <td><button onclick='agregarAlCarrito(${JSON.stringify(p)}, "cant_${i}")'>Agregar</button></td>
           </tr>
         `).join("");
       }
     }
 
-    // 🔹 Guardar producto en localStorage (carrito)
-    window.agregarAlCarrito = function(producto) {
+    // 🔹 Guardar producto con cantidad en localStorage
+    window.agregarAlCarrito = function(producto, inputId) {
+      const cantidad = parseInt(document.getElementById(inputId).value) || 1;
+      producto.cantidad = cantidad;
+
       let carrito = JSON.parse(localStorage.getItem("carritoLiquidos")) || [];
       carrito.push(producto);
       localStorage.setItem("carritoLiquidos", JSON.stringify(carrito));
-      alert("Producto agregado al carrito");
+
+      alert(`Se agregó ${cantidad} de ${producto.concepto} al carrito`);
     }
   </script>
 </body>
