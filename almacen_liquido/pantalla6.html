@@ -2,50 +2,83 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Resumen Final – Almacén Líquidos</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resumen Final - Almacén Líquidos</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body{
-      font-family:'Poppins',sans-serif;
-      background:linear-gradient(to right,#00416A,#E4E5E6);
-      margin:0; padding:20px; min-height:100vh;
-      box-sizing:border-box;
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to right, #00416A, #E4E5E6);
+      padding: 20px;
+      margin: 0;
+      min-height: 100vh;
     }
-    .contenedor{
-      background:white; max-width:900px; margin:auto;
-      border-radius:12px; padding:20px;
-      box-shadow:0 4px 12px rgba(0,0,0,.2);
+    .contenedor {
+      background: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+      box-shadow: 0 3px 10px rgba(0,0,0,.2);
     }
-    h2{text-align:center;color:#00416A;margin-bottom:20px}
-    .info{margin-bottom:20px}
-    .info p{margin:6px 0;font-size:16px}
-    table{width:100%;border-collapse:collapse;margin-top:15px}
-    th,td{border:1px solid #ccc;padding:8px;text-align:center}
-    th{background:#00416A;color:white}
-    .firmas{display:flex;justify-content:space-around;margin-top:25px;flex-wrap:wrap}
-    .firma-box{text-align:center;margin:10px}
-    .firma-box img{border:1px solid #ccc;width:220px;height:100px;object-fit:contain;background:#fdfdfd}
-    .boton{
-      display:block;margin:25px auto 0;padding:12px 24px;
-      background:#00416A;color:white;font-size:16px;
-      border:none;border-radius:6px;cursor:pointer;
-      transition:.3s;
+    h2 {
+      text-align: center;
+      color: #00416A;
     }
-    .boton:hover{background:#006699}
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background: #00416A;
+      color: white;
+    }
+    .firmas {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .firma-box {
+      text-align: center;
+      margin: 10px;
+    }
+    .firma-box img {
+      border: 1px solid #ccc;
+      width: 220px;
+      height: 120px;
+    }
+    button {
+      display: block;
+      margin: 25px auto 0;
+      background: #00416A;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #036;
+    }
   </style>
 </head>
 <body>
   <div class="contenedor">
     <h2>Resumen Final – Almacén Líquidos</h2>
 
-    <div class="info">
-      <p><b>Folio:</b> <span id="folio"></span></p>
-      <p><b>Fecha:</b> <span id="fecha"></span></p>
-      <p><b>Destino:</b> <span id="destino"></span></p>
-      <p><b>Entrega:</b> <span id="entrega"></span></p>
-      <p><b>Recibe:</b> <span id="recibe"></span></p>
-    </div>
+    <p>Folio: <span id="folio"></span></p>
+    <p>Fecha: <span id="fecha"></span></p>
+    <p>Destino: <span id="destino"></span></p>
+    <p>Entrega: <span id="entrega"></span></p>
+    <p>Recibe: <span id="recibe"></span></p>
 
     <h3>Productos</h3>
     <table>
@@ -56,31 +89,29 @@
           <th>Cantidad</th>
         </tr>
       </thead>
-      <tbody id="tablaProductos"></tbody>
+      <tbody id="tabla-productos"></tbody>
     </table>
 
     <div class="firmas">
       <div class="firma-box">
-        <p><b>Firma – Quien Entrega</b></p>
-        <img id="firmaEntrega" alt="Firma Entrega">
-        <p id="nombreEntrega"></p>
+        <p>Firma – Quien Entrega</p>
+        <img id="firmaEntregaImg">
       </div>
       <div class="firma-box">
-        <p><b>Firma – Quien Recibe</b></p>
-        <img id="firmaRecibe" alt="Firma Recibe">
-        <p id="nombreRecibe"></p>
+        <p>Firma – Quien Recibe</p>
+        <img id="firmaRecibeImg">
       </div>
     </div>
 
-    <button class="boton" onclick="guardarFirebase()">Guardar en Firebase</button>
+    <button id="guardar">Guardar en Firebase</button>
   </div>
 
   <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // 🔹 Tu configuración Firebase
+    // Configuración Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
       authDomain: "inventariopv-643f1.firebaseapp.com",
@@ -90,57 +121,62 @@
       appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
     };
 
-    // Inicializar Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Recuperar datos del localStorage
-    document.getElementById("folio").textContent   = localStorage.getItem("folioLiquidos")   || "";
-    document.getElementById("fecha").textContent   = localStorage.getItem("fechaLiquidos")   || "";
-    document.getElementById("destino").textContent = localStorage.getItem("destinoLiquidos") || "";
-    document.getElementById("entrega").textContent = localStorage.getItem("entregaLiquidos") || "";
-    document.getElementById("recibe").textContent  = localStorage.getItem("recibeLiquidos")  || "";
+    // Recuperar y mostrar info
+    document.addEventListener("DOMContentLoaded", () => {
+      const folio = localStorage.getItem("folio") || "";
+      const fecha = localStorage.getItem("fecha") || "";
+      const destino = localStorage.getItem("destino") || "";
+      const entrega = localStorage.getItem("entrega") || "";
+      const recibe = localStorage.getItem("recibe") || "";
+      const productos = JSON.parse(localStorage.getItem("productos")) || [];
+      const firmaEntrega = localStorage.getItem("firmaEntrega");
+      const firmaRecibe = localStorage.getItem("firmaRecibe");
 
-    document.getElementById("firmaEntrega").src    = localStorage.getItem("firmaEntregaLiquidos") || "";
-    document.getElementById("firmaRecibe").src     = localStorage.getItem("firmaRecibeLiquidos")  || "";
-    document.getElementById("nombreEntrega").textContent = localStorage.getItem("entregaLiquidos") || "";
-    document.getElementById("nombreRecibe").textContent  = localStorage.getItem("recibeLiquidos")  || "";
+      document.getElementById("folio").textContent = folio;
+      document.getElementById("fecha").textContent = fecha;
+      document.getElementById("destino").textContent = destino;
+      document.getElementById("entrega").textContent = entrega;
+      document.getElementById("recibe").textContent = recibe;
 
-    // Productos
-    const productos = JSON.parse(localStorage.getItem("productosLiquidos") || "[]");
-    const tabla = document.getElementById("tablaProductos");
-    productos.forEach(p=>{
-      const fila = `<tr>
-                      <td>${p.codigo}</td>
-                      <td>${p.descripcion}</td>
-                      <td>${p.cantidad}</td>
-                    </tr>`;
-      tabla.insertAdjacentHTML("beforeend", fila);
+      const tabla = document.getElementById("tabla-productos");
+      productos.forEach(p => {
+        let fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td>${p.codigo}</td>
+          <td>${p.descripcion}</td>
+          <td>${p.cantidad}</td>
+        `;
+        tabla.appendChild(fila);
+      });
+
+      if(firmaEntrega) document.getElementById("firmaEntregaImg").src = firmaEntrega;
+      if(firmaRecibe) document.getElementById("firmaRecibeImg").src = firmaRecibe;
+
+      // Guardar en Firebase
+      document.getElementById("guardar").addEventListener("click", async () => {
+        try {
+          await addDoc(collection(db, "almacenes", "almacen_liquidos", "salidas"), {
+            folio,
+            fecha,
+            destino,
+            entrega,
+            recibe,
+            productos,
+            firmaEntrega,
+            firmaRecibe,
+            timestamp: serverTimestamp()
+          });
+          alert("✅ Registro guardado en Firebase correctamente");
+          localStorage.clear();
+        } catch (e) {
+          console.error("Error guardando: ", e);
+          alert("❌ Error al guardar en Firebase");
+        }
+      });
     });
-
-    // Guardar en Firebase
-    async function guardarFirebase(){
-      try{
-        await addDoc(collection(db, "almacenes/almacen_liquidos/salidas"), {
-          folio: localStorage.getItem("folioLiquidos"),
-          fecha: localStorage.getItem("fechaLiquidos"),
-          destino: localStorage.getItem("destinoLiquidos"),
-          entrega: localStorage.getItem("entregaLiquidos"),
-          recibe: localStorage.getItem("recibeLiquidos"),
-          firmaEntrega: localStorage.getItem("firmaEntregaLiquidos"),
-          firmaRecibe: localStorage.getItem("firmaRecibeLiquidos"),
-          productos: productos,
-          timestamp: new Date()
-        });
-        alert("✅ Salida guardada en Firebase correctamente");
-      }catch(e){
-        console.error("Error al guardar:", e);
-        alert("❌ Error al guardar en Firebase");
-      }
-    }
-
-    // Hacer la función accesible al botón
-    window.guardarFirebase = guardarFirebase;
   </script>
 </body>
 </html>
