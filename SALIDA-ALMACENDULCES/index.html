@@ -14,7 +14,6 @@
     .boton{background-color:#d32f2f;color:white;border:none;padding:12px 20px;font-size:16px;border-radius:6px;cursor:pointer;width:100%}
     .boton:hover{background-color:#b71c1c}
     .folio{margin-bottom:20px;font-weight:bold}
-    .descargar-manual{display:block;margin-top:20px;text-align:center;padding:12px 20px;background:#00416A;color:white;border-radius:6px;text-decoration:none}
   </style>
 </head>
 <body>
@@ -33,48 +32,53 @@
       <option value="Octavio Cortes Zapata">Octavio Cortes Zapata</option>
     </select>
 
-  <label><b>Recibe:</b></label>
-<div class="lista-recibe">
-  <label><input type="checkbox" name="recibe" value="YESENIA URIEGAS MENDOZA"> YESENIA URIEGAS MENDOZA</label><br>
-  <label><input type="checkbox" name="recibe" value="PABLO NUÑEZ PALOMINO (PABIN)"> PABLO NUÑEZ PALOMINO (PABIN)</label><br>
-  <label><input type="checkbox" name="recibe" value="ELOY SANCHEZ AVENDAÑO"> ELOY SANCHEZ AVENDAÑO</label><br>
-  <label><input type="checkbox" name="recibe" value="JUAN MANUEL SALDAÑA BECERRA (JUANITO)"> JUAN MANUEL SALDAÑA BECERRA (JUANITO)</label><br>
-  <label><input type="checkbox" name="recibe" value="LUIS ALBERTO PERALES AGUILAR (GUARDIA)"> LUIS ALBERTO PERALES AGUILAR (GUARDIA)</label><br>
-  <label><input type="checkbox" name="recibe" value="SANDRA GUADALUPE PATIÑO PEREZ"> SANDRA GUADALUPE PATIÑO PEREZ</label><br>
-  <label><input type="checkbox" name="recibe" value="MA ESTHER RODRIGUEZ SIERRA"> MA ESTHER RODRIGUEZ SIERRA</label><br>
-  <label><input type="checkbox" name="recibe" value="GAEL HUMBERTO SANCHEZ"> GAEL HUMBERTO SANCHEZ</label><br>
-  <label><input type="checkbox" name="recibe" value="JOSE NAPOLEON GARCIA LERMA"> JOSE NAPOLEON GARCIA LERMA</label><br>
-  <label><input type="checkbox" name="recibe" value="JUAN CARLOS GONZALEZ TERRAZAS"> JUAN CARLOS GONZALEZ TERRAZAS</label><br>
-  <label><input type="checkbox" name="recibe" value="VERONICA ALEJANDRO BECERRA LERMA"> VERONICA ALEJANDRO BECERRA LERMA</label><br>
-  <label><input type="checkbox" name="recibe" value="CLAUDIA VERONICA CUELLAR RODRIGUEZ"> CLAUDIA VERONICA CUELLAR RODRIGUEZ</label><br>
-  <label><input type="checkbox" name="recibe" value="MARTIN LEOBARDO SERNA ALEMAN"> MARTIN LEOBARDO SERNA ALEMAN</label><br>
-  <label><input type="checkbox" name="recibe" value="HEISEL MAIRELI GUERRA DE LA CRUZ"> HEISEL MAIRELI GUERRA DE LA CRUZ</label><br>
-  <label><input type="checkbox" name="recibe" value="ROSALVA CARRILLO SANCHEZ"> ROSALVA CARRILLO SANCHEZ</label><br>
-  <label><input type="checkbox" name="recibe" value="LIZBETH YAQUELIN LUNA ROQUE"> LIZBETH YAQUELIN LUNA ROQUE</label><br>
-  <label><input type="checkbox" name="recibe" value="CHRISTHOFER AARON DAVILA VALDEZ"> CHRISTHOFER AARON DAVILA VALDEZ</label><br>
-  <label><input type="checkbox" name="recibe" value="VANIA GALILEA DUARTE VILLARREAL"> VANIA GALILEA DUARTE VILLARREAL</label><br>
-  <label><input type="checkbox" name="recibe" value="MIGUEL ANGEL LOPEZ RDZ"> MIGUEL ANGEL LOPEZ RDZ</label><br>
-  <label><input type="checkbox" name="recibe" value="ROLANDO RAUL GARZA"> ROLANDO RAUL GARZA</label><br>
-  <label><input type="checkbox" name="recibe" value="FERNANDA LOERA"> FERNANDA LOERA</label><br>
-  <label><input type="checkbox" name="recibe" value="SANTIAGO MORENO"> SANTIAGO MORENO</label><br>
-  <label><input type="checkbox" name="recibe" value="JOSE GERARDO CABRERA TREVIÑO"> JOSE GERARDO CABRERA TREVIÑO</label><br>
-  <label><input type="checkbox" name="recibe" value="RODOLFO DAVID OVIEDO INFANTE"> RODOLFO DAVID OVIEDO INFANTE</label><br>
-  <label><input type="checkbox" name="recibe" value="LEONARDO DANIEL CUELLAR MARTINEZ"> LEONARDO DANIEL CUELLAR MARTINEZ</label><br>
-  <label><input type="checkbox" name="recibe" value="JUAN GABRIEL PEREZ CARRILLO"> JUAN GABRIEL PEREZ CARRILLO</label><br>
-  <label><input type="checkbox" name="recibe" value="DORA ALICIA CARDENAS TORRES"> DORA ALICIA CARDENAS TORRES</label><br>
-  <label><input type="checkbox" name="recibe" value="JESUS GUADALUPE HERNANDEZ LUNA"> JESUS GUADALUPE HERNANDEZ LUNA</label><br>
-  <label><input type="checkbox" name="recibe" value="JUAN ARTURO RODRIGUEZ GARCIA"> JUAN ARTURO RODRIGUEZ GARCIA</label><br>
-  <label><input type="checkbox" name="recibe" value="OCTAVIO CORTES ZAPATA"> OCTAVIO CORTES ZAPATA</label><br>
-  <label><input type="checkbox" name="recibe" value="JUAN MANUEL ROJAS SANCHEZ"> JUAN MANUEL ROJAS SANCHEZ</label><br>
-  <label><input type="checkbox" name="recibe" value="ERICK SAUL RAMIREZ"> ERICK SAUL RAMIREZ</label><br>
-  <label><input type="checkbox" name="recibe" value="JUAN MANUEL TAMEZ SERRATO"> JUAN MANUEL TAMEZ SERRATO</label><br>
-</div>
+    <label for="recibe">Recibe:</label>
+    <select id="recibe">
+      <option value="">Selecciona quien recibe</option>
+      <option value="YESENIA URIEGAS MENDOZA">YESENIA URIEGAS MENDOZA</option>
+      <option value="PABLO NUÑEZ PALOMINO (PABIN)">PABLO NUÑEZ PALOMINO (PABIN)</option>
+      <option value="ELOY SANCHEZ AVENDAÑO">ELOY SANCHEZ AVENDAÑO</option>
+      <option value="JUAN MANUEL SALDAÑA BECERRA (JUANITO)">JUAN MANUEL SALDAÑA BECERRA (JUANITO)</option>
+      <option value="LUIS ALBERTO PERALES AGUILAR (GUARDIA)">LUIS ALBERTO PERALES AGUILAR (GUARDIA)</option>
+      <option value="SANDRA GUADALUPE PATIÑO PEREZ">SANDRA GUADALUPE PATIÑO PEREZ</option>
+      <option value="MA ESTHER RODRIGUEZ SIERRA">MA ESTHER RODRIGUEZ SIERRA</option>
+      <option value="GAEL HUMBERTO SANCHEZ">GAEL HUMBERTO SANCHEZ</option>
+      <option value="JOSE NAPOLEON GARCIA LERMA">JOSE NAPOLEON GARCIA LERMA</option>
+      <option value="JUAN CARLOS GONZALEZ TERRAZAS">JUAN CARLOS GONZALEZ TERRAZAS</option>
+      <option value="VERONICA ALEJANDRO BECERRA LERMA">VERONICA ALEJANDRO BECERRA LERMA</option>
+      <option value="CLAUDIA VERONICA CUELLAR RODRIGUEZ">CLAUDIA VERONICA CUELLAR RODRIGUEZ</option>
+      <option value="MARTIN LEOBARDO SERNA ALEMAN">MARTIN LEOBARDO SERNA ALEMAN</option>
+      <option value="HEISEL MAIRELI GUERRA DE LA CRUZ">HEISEL MAIRELI GUERRA DE LA CRUZ</option>
+      <option value="ROSALVA CARRILLO SANCHEZ">ROSALVA CARRILLO SANCHEZ</option>
+      <option value="LIZBETH YAQUELIN LUNA ROQUE">LIZBETH YAQUELIN LUNA ROQUE</option>
+      <option value="CHRISTHOFER AARON DAVILA VALDEZ">CHRISTHOFER AARON DAVILA VALDEZ</option>
+      <option value="VANIA GALILEA DUARTE VILLARREAL">VANIA GALILEA DUARTE VILLARREAL</option>
+      <option value="MIGUEL ANGEL LOPEZ RDZ">MIGUEL ANGEL LOPEZ RDZ</option>
+      <option value="ROLANDO RAUL GARZA">ROLANDO RAUL GARZA</option>
+      <option value="FERNANDA LOERA">FERNANDA LOERA</option>
+      <option value="SANTIAGO MORENO">SANTIAGO MORENO</option>
+      <option value="JOSE GERARDO CABRERA TREVIÑO">JOSE GERARDO CABRERA TREVIÑO</option>
+      <option value="RODOLFO DAVID OVIEDO INFANTE">RODOLFO DAVID OVIEDO INFANTE</option>
+      <option value="LEONARDO DANIEL CUELLAR MARTINEZ">LEONARDO DANIEL CUELLAR MARTINEZ</option>
+      <option value="JUAN GABRIEL PEREZ CARRILLO">JUAN GABRIEL PEREZ CARRILLO</option>
+      <option value="DORA ALICIA CARDENAS TORRES">DORA ALICIA CARDENAS TORRES</option>
+      <option value="JESUS GUADALUPE HERNANDEZ LUNA">JESUS GUADALUPE HERNANDEZ LUNA</option>
+      <option value="JUAN ARTURO RODRIGUEZ GARCIA">JUAN ARTURO RODRIGUEZ GARCIA</option>
+      <option value="OCTAVIO CORTES ZAPATA">OCTAVIO CORTES ZAPATA</option>
+      <option value="JUAN MANUEL ROJAS SANCHEZ">JUAN MANUEL ROJAS SANCHEZ</option>
+      <option value="ERICK SAUL RAMIREZ">ERICK SAUL RAMIREZ</option>
+      <option value="JUAN MANUEL TAMEZ SERRATO">JUAN MANUEL TAMEZ SERRATO</option>
+    </select>
 
-<label><b>Destino:</b></label>
-<div class="lista-destino">
-  <label><input type="checkbox" name="destino" value="MATRIZ PISO"> MATRIZ PISO</label><br>
-  <label><input type="checkbox" name="destino" value="BODEGA ESPECIAS"> BODEGA ESPECIAS</label><br>
-</div>
+    <label for="destino">Destino:</label>
+    <select id="destino">
+      <option value="">Selecciona destino</option>
+      <option value="MATRIZ PISO">MATRIZ PISO</option>
+      <option value="BODEGA ESPECIAS">BODEGA ESPECIAS</option>
+    </select>
+
+    <button class="boton" onclick="continuar()">Continuar</button>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
@@ -99,7 +103,6 @@
 
       const folioFinal = "SALDUL - " + String(numero).padStart(4, "0");
       document.getElementById("proximoFolio").textContent = folioFinal;
-      // Guarda el folio para el resumen
       localStorage.setItem("folio", folioFinal);
     }
 
@@ -111,7 +114,6 @@
       const fechaInput = `${yyyy}-${mm}-${dd}`;
       document.getElementById("fecha").value = fechaInput;
 
-      // Guardamos una fecha legible para el resumen
       const fechaLegible = new Date().toLocaleString("es-MX");
       localStorage.setItem("fecha", fechaLegible);
     }
@@ -129,7 +131,6 @@
       localStorage.setItem("entrega", entrega);
       localStorage.setItem("recibe",  recibe);
       localStorage.setItem("destino", destino);
-      // NO volver a guardar 'fecha' aquí para no pisarla con otro formato
 
       window.location.href = "pantalla2.html";
     }
