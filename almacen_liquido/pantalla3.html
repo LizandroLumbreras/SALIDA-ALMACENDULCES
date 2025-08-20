@@ -65,6 +65,11 @@
       gap: 5px;
       justify-content: center;
     }
+    .botones-nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -84,7 +89,9 @@
       <tbody id="tablaCarrito"></tbody>
     </table>
 
-    <div style="text-align:center; margin-top:20px;">
+    <!-- Botones de navegación -->
+    <div class="botones-nav">
+      <button onclick="regresar()">← Agregar más productos</button>
       <button onclick="continuar()">Continuar →</button>
     </div>
   </div>
@@ -126,6 +133,11 @@
     function continuar() {
       localStorage.setItem("carrito_liquidos", JSON.stringify(carrito));
       window.location.href = "pantalla4.html";
+    }
+
+    function regresar() {
+      localStorage.setItem("carrito_liquidos", JSON.stringify(carrito));
+      window.location.href = "pantalla2.html";
     }
 
     renderCarrito();
