@@ -34,77 +34,82 @@
       <tbody id="tablaResultados"></tbody>
     </table>
   </div>
-<div style="text-align:center; margin-top:20px;">
-  <button onclick="window.location.href='pantalla3.html'">🛒 Ver Carrito</button>
-</div>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // 🔹 Configuración Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
-    authDomain: "inventariopv-643f1.firebaseapp.com",
-    projectId: "inventariopv-643f1",
-    storageBucket: "inventariopv-643f1.firebasestorage.app",
-    messagingSenderId: "96242533231",
-    appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
-  };
+  <div style="text-align:center; margin-top:20px;">
+    <button onclick="window.location.href='pantalla3.html'">🛒 Ver Carrito</button>
+  </div>
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // === Buscar producto ===
-  window.buscarProducto = async function (texto) {
-    const tabla = document.getElementById("tablaResultados");
-    tabla.innerHTML = "";
+    // 🔹 Configuración Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
+      authDomain: "inventariopv-643f1.firebaseapp.com",
+      projectId: "inventariopv-643f1",
+      storageBucket: "inventariopv-643f1.appspot.com",
+      messagingSenderId: "96242533231",
+      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
+    };
 
-    if (!texto.trim()) return;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-    try {
-      const snap = await getDocs(collection(db, "productos"));
-      let resultados = [];
+    // 🔹 Buscar productos
+    async function buscarProductos(texto) {
+      const productosRef = collection(db, "productos");
+      const snapshot = await getDocs(productosRef);
+      const resultados = [];
 
-      snap.forEach(doc => {
+      snapshot.forEach((doc) => {
         const p = doc.data();
-        // 🔍 Búsqueda flexible
+
+        // Solo productos activos
+        if (p.activo !== true) return;
+
+        const codigo = p.codigoBarra ? p.codigoBarra.toString() : "";
+        const nombre = p.concepto ? p.concepto.toLowerCase() : "";
+
         if (
-          (p["Codigo Barra"] && p["Codigo Barra"].toString().includes(texto.trim())) ||
-          (p.Nombre && p.Nombre.toLowerCase().includes(texto.trim().toLowerCase()))
+          (codigo.includes(texto.trim())) ||
+          (nombre.includes(texto.trim().toLowerCase()))
         ) {
           resultados.push({ id: doc.id, ...p });
         }
       });
 
-      if (resultados.length === 0) {
-        tabla.innerHTML = `<tr><td colspan="4">⚠️ No se encontró el producto</td></tr>`;
-        return;
-      }
-
-      resultados.forEach(p => {
-        const fila = `
-          <tr>
-            <td>${p["Codigo Barra"] || ""}</td>
-            <td>${p.Nombre || ""}</td>
-            <td>${p.Unidad || ""}</td>
-            <td><button onclick="agregarProducto('${p.id}','${p.Nombre}','${p.Unidad}')">➕ Agregar</button></td>
-          </tr>
-        `;
-        tabla.innerHTML += fila;
-      });
-
-    } catch (e) {
-      console.error("❌ Error al buscar:", e);
+      return resultados;
     }
-  };
 
-  // === Agregar producto al carrito ===
-  window.agregarProducto = function (id, nombre, unidad) {
-    let carrito = JSON.parse(localStorage.getItem("carritoLiquidos") || "[]");
-    carrito.push({ id, nombre, unidad, cantidad: 1 });
-    localStorage.setItem("carritoLiquidos", JSON.stringify(carrito));
-    alert(`✅ ${nombre} agregado`);
-  };
-</script>
+    // 🔹 Mostrar resultados en tabla
+    window.buscarProducto = async function(texto) {
+      const tbody = document.getElementById("tablaResultados");
+      tbody.innerHTML = "<tr><td colspan='4'>Buscando...</td></tr>";
+
+      const productos = await buscarProductos(texto);
+
+      if (productos.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='4'>No se encontraron productos</td></tr>";
+      } else {
+        tbody.innerHTML = productos.map(p => `
+          <tr>
+            <td>${p.codigoBarra}</td>
+            <td>${p.concepto}</td>
+            <td>${p.unidad || ""}</td>
+            <td><button onclick='agregarAlCarrito(${JSON.stringify(p)})'>Agregar</button></td>
+          </tr>
+        `).join("");
+      }
+    }
+
+    // 🔹 Guardar producto en localStorage (carrito)
+    window.agregarAlCarrito = function(producto) {
+      let carrito = JSON.parse(localStorage.getItem("carritoLiquidos")) || [];
+      carrito.push(producto);
+      localStorage.setItem("carritoLiquidos", JSON.stringify(carrito));
+      alert("Producto agregado al carrito");
+    }
+  </script>
 </body>
 </html>
