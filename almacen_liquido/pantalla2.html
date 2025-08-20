@@ -18,9 +18,6 @@
 </head>
 <body>
   <div class="contenedor">
-    <div style="text-align:center; margin-top:20px;">
-  <button onclick="window.location.href='pantalla3.html'">🛒 Ver Carrito</button>
-</div>
     <h2>Buscar Productos – Almacén Líquido</h2>
 
     <input type="text" id="buscador" placeholder="Escribe código o nombre del producto..." oninput="buscarProducto(this.value)"/>
@@ -37,10 +34,12 @@
       <tbody id="tablaResultados"></tbody>
     </table>
   </div>
-
+<div style="text-align:center; margin-top:20px;">
+  <button onclick="window.location.href='pantalla3.html'">🛒 Ver Carrito</button>
+</div>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   // 🔹 Configuración Firebase
   const firebaseConfig = {
@@ -55,7 +54,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // === Buscar producto (código o nombre) ===
+  // === Buscar producto ===
   window.buscarProducto = async function (texto) {
     const tabla = document.getElementById("tablaResultados");
     tabla.innerHTML = "";
@@ -63,48 +62,43 @@
     if (!texto.trim()) return;
 
     try {
-      let q;
+      const snap = await getDocs(collection(db, "productos"));
+      let resultados = [];
 
-      if (/^\d+$/.test(texto.trim())) {
-        // 🔍 Buscar por Código de Barra (solo números)
-        q = query(
-          collection(db, "productos"),
-          where("Codigo Barra", "==", texto.trim())
-        );
-      } else {
-        // 🔍 Buscar por Nombre
-        q = query(
-          collection(db, "productos"),
-          where("Nombre", ">=", texto.toUpperCase()),
-          where("Nombre", "<=", texto.toUpperCase() + "\uf8ff")
-        );
-      }
+      snap.forEach(doc => {
+        const p = doc.data();
+        // 🔍 Búsqueda flexible
+        if (
+          (p["Codigo Barra"] && p["Codigo Barra"].toString().includes(texto.trim())) ||
+          (p.Nombre && p.Nombre.toLowerCase().includes(texto.trim().toLowerCase()))
+        ) {
+          resultados.push({ id: doc.id, ...p });
+        }
+      });
 
-      const snap = await getDocs(q);
-
-      if (snap.empty) {
+      if (resultados.length === 0) {
         tabla.innerHTML = `<tr><td colspan="4">⚠️ No se encontró el producto</td></tr>`;
         return;
       }
 
-      snap.forEach(doc => {
-        const p = doc.data();
+      resultados.forEach(p => {
         const fila = `
           <tr>
             <td>${p["Codigo Barra"] || ""}</td>
             <td>${p.Nombre || ""}</td>
             <td>${p.Unidad || ""}</td>
-            <td><button onclick="agregarProducto('${doc.id}','${p.Nombre}','${p.Unidad}')">➕ Agregar</button></td>
+            <td><button onclick="agregarProducto('${p.id}','${p.Nombre}','${p.Unidad}')">➕ Agregar</button></td>
           </tr>
         `;
         tabla.innerHTML += fila;
       });
+
     } catch (e) {
       console.error("❌ Error al buscar:", e);
     }
   };
 
-  // === Agregar producto temporalmente ===
+  // === Agregar producto al carrito ===
   window.agregarProducto = function (id, nombre, unidad) {
     let carrito = JSON.parse(localStorage.getItem("carritoLiquidos") || "[]");
     carrito.push({ id, nombre, unidad, cantidad: 1 });
@@ -112,6 +106,5 @@
     alert(`✅ ${nombre} agregado`);
   };
 </script>
-
 </body>
 </html>
