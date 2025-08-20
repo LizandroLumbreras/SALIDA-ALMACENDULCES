@@ -2,95 +2,133 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <title>Salida – Almacén Líquidos (Pantalla 3)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pantalla 3 – Carrito (Líquidos)</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body{font-family:'Poppins',sans-serif;background:linear-gradient(to right,#00416A,#E4E5E6);margin:0;min-height:100vh}
-    .contenedor{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.2);margin-top:30px}
-    table{width:100%;border-collapse:collapse;margin-top:20px}
-    th,td{border:1px solid #ccc;padding:8px;text-align:center}
-    th{background:#00416A;color:#fff}
-    input[type="number"]{width:70px;text-align:center}
-    button{padding:8px 12px;border:none;border-radius:6px;cursor:pointer;font-size:15px}
-    .btn-prim{background:#0c6cbd;color:#fff}
-    .btn-prim:hover{background:#0a4e8c}
-    .btn-sec{background:#555;color:#fff}
-    .btn-sec:hover{background:#333}
-    .acciones{margin-top:20px;display:flex;justify-content:space-between}
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      background: linear-gradient(to right, #00416A,#E4E5E6);
+      color: #111;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      color: #00416A;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background: #00416A;
+      color: white;
+    }
+    input[type="number"] {
+      width: 70px;
+      padding: 6px;
+      border: 1px solid #aaa;
+      border-radius: 6px;
+      text-align: center;
+    }
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      background: #00416A;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      margin: 3px;
+    }
+    button:hover {
+      background: #0066aa;
+    }
+    .acciones {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+    }
   </style>
 </head>
 <body>
-  <div class="contenedor">
-    <h2>🛒 Carrito – Almacén Líquidos</h2>
+  <div class="card">
+    <h2>Carrito de Productos – Almacén Líquidos</h2>
 
     <table>
       <thead>
         <tr>
           <th>Código</th>
-          <th>Producto</th>
+          <th>Descripción</th>
           <th>Unidad</th>
           <th>Cantidad</th>
-          <th>Acción</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody id="tablaCarrito"></tbody>
     </table>
 
-    <div class="acciones">
-      <button class="btn-sec" onclick="window.location.href='pantalla2.html'">← Regresar y agregar más</button>
-      <button class="btn-prim" onclick="finalizar()">Finalizar y firmar →</button>
+    <div style="text-align:center; margin-top:20px;">
+      <button onclick="continuar()">Continuar →</button>
     </div>
   </div>
 
   <script>
-    function mostrarCarrito(){
-      const carrito = JSON.parse(localStorage.getItem("carritoLiquidos")) || [];
-      const tbody = document.getElementById("tablaCarrito");
+    let carrito = JSON.parse(localStorage.getItem("carrito_liquidos")) || [];
 
-      if(carrito.length === 0){
-        tbody.innerHTML = "<tr><td colspan='5'>Carrito vacío</td></tr>";
-        return;
-      }
+    function renderCarrito() {
+      const tabla = document.getElementById("tablaCarrito");
+      tabla.innerHTML = "";
 
-      tbody.innerHTML = carrito.map((p, i) => `
-        <tr>
-          <td>${p.codigoBarra}</td>
-          <td>${p.concepto}</td>
-          <td>${p.unidad || ""}</td>
-          <td><input type="number" min="1" value="${p.cantidad || 1}" onchange="actualizarCantidad(${i}, this.value)"></td>
-          <td><button onclick="eliminar(${i})">❌ Eliminar</button></td>
-        </tr>
-      `).join("");
+      carrito.forEach((item, index) => {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td>${item.codigo}</td>
+          <td>${item.descripcion}</td>
+          <td>${item.unidad}</td>
+          <td><input type="number" min="1" value="${item.cantidad}" onchange="cambiarCantidad(${index}, this.value)"></td>
+          <td class="acciones">
+            <button onclick="eliminar(${index})">❌ Eliminar</button>
+          </td>
+        `;
+        tabla.appendChild(fila);
+      });
+
+      localStorage.setItem("carrito_liquidos", JSON.stringify(carrito));
     }
 
-    // 🔹 Actualizar cantidad
-    function actualizarCantidad(index, nuevaCantidad){
-      let carrito = JSON.parse(localStorage.getItem("carritoLiquidos")) || [];
+    function cambiarCantidad(index, nuevaCantidad) {
       carrito[index].cantidad = parseInt(nuevaCantidad);
-      localStorage.setItem("carritoLiquidos", JSON.stringify(carrito));
-      mostrarCarrito();
+      localStorage.setItem("carrito_liquidos", JSON.stringify(carrito));
     }
 
-    // 🔹 Eliminar producto
-    function eliminar(index){
-      let carrito = JSON.parse(localStorage.getItem("carritoLiquidos")) || [];
-      carrito.splice(index,1);
-      localStorage.setItem("carritoLiquidos", JSON.stringify(carrito));
-      mostrarCarrito();
+    function eliminar(index) {
+      carrito.splice(index, 1);
+      renderCarrito();
     }
 
-    // 🔹 Guardar y pasar a pantalla 4 (firma entrega)
-    function finalizar(){
-      const carrito = JSON.parse(localStorage.getItem("carritoLiquidos")) || [];
-      if(carrito.length === 0){
-        alert("El carrito está vacío");
-        return;
-      }
-      window.location.href = "pantalla4.html"; 
+    function continuar() {
+      localStorage.setItem("carrito_liquidos", JSON.stringify(carrito));
+      window.location.href = "pantalla4.html";
     }
 
-    mostrarCarrito();
+    renderCarrito();
   </script>
 </body>
 </html>
