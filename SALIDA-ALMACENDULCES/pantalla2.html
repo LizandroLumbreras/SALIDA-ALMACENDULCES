@@ -128,51 +128,94 @@
       document.getElementById('verCarritoBtn').style.display = productos.length > 0 ? 'block' : 'none';
     }
 
-    // ===== Anti-rebote escáner + debounce de nombre =====
-    const buscador = document.getElementById('buscador');
-    const SCAN_DEBOUNCE_MS = 700;
-    let lastScanCode = '';
-    let lastScanAt = 0;
+// ===== CONFIG ANTI-DUP =====
+const SCAN_DEBOUNCE_MS = 800;
+const TYPE_DEBOUNCE_MS = 300;
 
-    let typingTimer = null;
-    const TYPE_DEBOUNCE_MS = 300;
+// ⬇️  MOVER buscador AFUERA del if para que sea visible en todo el archivo
+const buscador = document.getElementById('buscador');
 
-    window.addEventListener('DOMContentLoaded', () => buscador.focus());
+if (!window.__scannerHandlersBound) {
+  window.__scannerHandlersBound = true;
 
-    // ENTER -> escáner (código)
-    buscador.addEventListener('keydown', async (e) => {
-      if (e.key !== 'Enter') return;
+  let lastScanCode = '';
+  let lastScanAt = 0;
+  let typingTimer = null;
+  let processing = false;
 
-      const raw = buscador.value.replace(/[\r\n]+/g, '');
-      const tCod = normCod(raw);
-      buscador.value = ''; // limpia inmediatamente
+  window.addEventListener('DOMContentLoaded', () => buscador && buscador.focus());
 
-      if (!tCod) return;
+  // === ESCÁNER: Enter o Tab ===
+  buscador.addEventListener('keydown', async (e) => {
+    const isSubmitKey = (e.key === 'Enter' || e.key === 'Tab' || e.code === 'NumpadEnter');
+    if (!isSubmitKey) return;
+    if (e.repeat) return;
+    e.preventDefault();
+    e.stopPropagation();
 
-      const now = Date.now();
-      if (tCod === lastScanCode && (now - lastScanAt) < SCAN_DEBOUNCE_MS) return;
-      lastScanCode = tCod; lastScanAt = now;
+    const raw = (buscador.value || '').replace(/[\r\n\t]+/g, '');
+    const tCod = (raw.trim()).replace(/\s+/g, '');
+    buscador.value = '';
 
+    if (!tCod) return;
+
+    const now = Date.now();
+    if (tCod === lastScanCode && (now - lastScanAt) < SCAN_DEBOUNCE_MS) return;
+    if (processing) return;
+
+    lastScanCode = tCod;
+    lastScanAt = now;
+    processing = true;
+
+    try {
       if (/^\d+$/.test(tCod)) {
-        const ok = await buscarPorCodigoDulces(tCod);
-        if (!ok) await buscarPorNombreDulces(tCod);
+        const ok = await (typeof buscarPorCodigoDulces === 'function'
+                          ? buscarPorCodigoDulces(tCod)
+                          : buscarPorCodigo(tCod));
+        if (!ok) {
+          await (typeof buscarPorNombreDulces === 'function'
+                 ? buscarPorNombreDulces(tCod)
+                 : buscarPorNombre(tCod));
+        }
       } else {
-        await buscarPorNombreDulces(tCod);
+        await (typeof buscarPorNombreDulces === 'function'
+               ? buscarPorNombreDulces(tCod)
+               : buscarPorNombre(tCod));
       }
-    });
+    } catch (err) {
+      console.error('[scanner handler]', err);
+    } finally {
+      processing = false;
+    }
+  });
 
-    // Escritura manual -> nombre (debounce)
-    buscador.addEventListener('input', () => {
-      const val = buscador.value.trim();
-      if (typingTimer) clearTimeout(typingTimer);
-      if (val.length < 2) { ocultarProducto(); return; }
-      if (/^\d{6,}$/.test(val)) return; // parece código -> espera Enter
+  // === TECLADO MANUAL: búsqueda por nombre con debounce ===
+  buscador.addEventListener('input', () => {
+    if (typingTimer) clearTimeout(typingTimer);
 
-      typingTimer = setTimeout(async () => {
-        await buscarPorNombreDulces(val);
-      }, TYPE_DEBOUNCE_MS);
-    });
+    const val = (buscador.value || '').trim();
+    if (val.length < 2) {
+      if (typeof ocultarProducto === 'function') ocultarProducto();
+      return;
+    }
+    if (/^\d{6,}$/.test(val)) return;
 
+    typingTimer = setTimeout(async () => {
+      try {
+        await (typeof buscarPorNombreDulces === 'function'
+               ? buscarPorNombreDulces(val)
+               : buscarPorNombre(val));
+      } catch (err) {
+        console.error('[typing debounce]', err);
+        if (typeof ocultarProducto === 'function') ocultarProducto();
+      }
+    }, TYPE_DEBOUNCE_MS);
+  });
+
+  buscador.addEventListener('change', () => {
+    buscador.value = (buscador.value || '').replace(/[\r\n\t]+/g, '');
+  });
+}
     // ===== Helpers con filtros activo + departamento =====
     async function buscarPorCodigoDulces(code) {
       try {
