@@ -1,41 +1,49 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Salida – Almacén Líquidos</title>
+  <meta charset="UTF-8" />
+  <title>Registrar salida - Líquidos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body{
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to right,#00416A,#E4E5E6);
-      margin:0; padding:20px;
-      min-height:100vh; display:flex; justify-content:center; align-items:center;
+      font-family:Arial,sans-serif;
+      background:linear-gradient(to right,#00416A,#E4E5E6);
+      padding:20px; margin:0; color:white;
+      min-height:100vh; box-sizing:border-box; position:relative;
     }
-    .card{
-      background:white; padding:30px; border-radius:12px;
-      box-shadow:0 4px 15px rgba(0,0,0,.2); max-width:400px; width:100%;
+    input[list],select,input[type="text"]{
+      width:100%; padding:10px; margin-bottom:20px;
+      font-size:16px; border-radius:6px; border:none; box-sizing:border-box;
     }
-    h2{ text-align:center; color:#00416A; margin-bottom:20px; }
-    label{ display:block; margin-top:12px; font-weight:bold; color:#00416A; }
-    input,select{
-      width:100%; padding:10px; margin-top:6px;
-      border:1px solid #ccc; border-radius:6px; font-size:15px;
+    .marca-agua{
+      position:fixed; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      opacity:.20; z-index:0; max-width:80%;
+      pointer-events:none;
     }
-    button{
-      margin-top:20px; width:100%; padding:12px;
-      border:none; border-radius:6px;
-      background:#00416A; color:white; font-size:16px; font-weight:bold;
-      cursor:pointer;
+    .contenedor{
+      background:rgba(255,255,255,.1);
+      border-radius:10px; padding:30px;
+      max-width:600px; margin:auto;
+      position:relative; z-index:2;
     }
-    button:hover{ background:#033b57; }
+    label{ display:block; margin-bottom:8px }
+    select,input[type="date"]{ color:black }
+    .boton{
+      background-color:#00416A; color:white;
+      border:none; padding:12px 20px; font-size:16px;
+      border-radius:6px; cursor:pointer; width:100%;
+    }
+    .boton:hover{ background-color:#033b57 }
+    .folio{ margin-bottom:20px; font-weight:bold }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2>Salida – Almacén Líquidos</h2>
+  <img src="logo_proveedora.webp" alt="Marca de agua" class="marca-agua">
 
-    <label for="folio">Folio:</label>
-    <input type="text" id="folio" readonly>
+  <div class="contenedor">
+    <h2>Registrar salida - Líquidos</h2>
+    <p class="folio">📌 Folio próximo: <strong id="proximoFolio">Cargando...</strong></p>
 
     <label for="fecha">Fecha:</label>
     <input type="date" id="fecha" readonly>
@@ -46,7 +54,7 @@
       <option value="Arturo Rodriguez Garcia">Arturo Rodriguez Garcia</option>
       <option value="Octavio Cortes Zapata">Octavio Cortes Zapata</option>
     </select>
-
+    
     <label for="recibe">Recibe:</label>
     <select id="recibe">
       <option value="">Selecciona quien recibe</option>
@@ -92,73 +100,72 @@
       <option value="BODEGA ESPECIAS">BODEGA ESPECIAS</option>
     </select>
 
-    <button onclick="guardarDatos()">Guardar y continuar</button>
+    <button class="boton" onclick="continuar()">Continuar</button>
   </div>
 
- <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script>
+    // Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
+      authDomain: "inventariopv-643f1.firebaseapp.com",
+      projectId: "inventariopv-643f1",
+      storageBucket: "inventariopv-643f1.appspot.com",
+      messagingSenderId: "96242533231",
+      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-  // 🔹 Configuración Firebase (ya integrada)
-  const firebaseConfig = {
-    apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
-    authDomain: "inventariopv-643f1.firebaseapp.com",
-    projectId: "inventariopv-643f1",
-    storageBucket: "inventariopv-643f1.firebasestorage.app",
-    messagingSenderId: "96242533231",
-    appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
-  };
+    // 🔹 Cargar folio desde Firestore (colección: consecutivos/salidas_liquidos)
+    async function cargarFolio() {
+      const docRef = db.collection("consecutivos").doc("salidas_liquidos");
+      const docSnap = await docRef.get();
+      let numero = 1;
+      if (docSnap.exists) numero = docSnap.data().ultimo || 1;
 
-  // 🔹 Inicializar Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // === Al cargar la página ===
-  window.addEventListener("DOMContentLoaded", () => {
-    // Generar folio consecutivo
-    let folioNum = localStorage.getItem("folioLiquidos") || 1;
-    const folioTxt = "SAL-LIQ-" + String(folioNum).padStart(4, "0");
-    document.getElementById("folio").value = folioTxt;
-
-    // Fijar fecha actual
-    const hoy = new Date().toISOString().split("T")[0];
-    document.getElementById("fecha").value = hoy;
-  });
-
-  // === Guardar en Firestore y LocalStorage ===
-  async function guardarDatos() {
-    const folio = document.getElementById("folio").value;
-    const fecha = document.getElementById("fecha").value;
-    const entrega = document.getElementById("entrega").value;
-    const recibe = document.getElementById("recibe").value;
-    const destino = document.getElementById("destino").value;
-
-    if (!folio || !fecha || !entrega || !recibe || !destino) {
-      alert("⚠️ Por favor complete todos los campos.");
-      return;
+      const folioFinal = "SAL-LIQ-" + String(numero).padStart(4, "0");
+      document.getElementById("proximoFolio").textContent = folioFinal;
+      localStorage.setItem("folioLiquidos", folioFinal);
     }
 
-    try {
-      await setDoc(doc(db, "almacenes/Almacen_Liquidos/salidas_temp", folio), {
-        folio, fecha, entrega, recibe, destino
-      });
-      console.log("✅ Datos guardados en Firestore");
-    } catch (e) {
-      console.error("❌ Error al guardar:", e);
+    // 🔹 Poner fecha actual
+    function ponerFechaHoy() {
+      const hoy = new Date();
+      const yyyy = hoy.getFullYear();
+      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+      const dd = String(hoy.getDate()).padStart(2, '0');
+      document.getElementById("fecha").value = `${yyyy}-${mm}-${dd}`;
+      const fechaLegible = new Date().toLocaleString("es-MX");
+      localStorage.setItem("fechaLiquidos", fechaLegible);
     }
 
-    // Actualizar consecutivo
-    let folioNum = parseInt(localStorage.getItem("folioLiquidos") || 1);
-    localStorage.setItem("folioLiquidos", folioNum + 1);
+    // 🔹 Guardar datos en localStorage y pasar a pantalla 2
+    function continuar() {
+      const entrega = document.getElementById("entrega").value;
+      const recibe  = document.getElementById("recibe").value;
+      const destino = document.getElementById("destino").value;
+      const folio   = localStorage.getItem("folioLiquidos");
+      const fecha   = localStorage.getItem("fechaLiquidos");
 
-    // Guardar en localStorage
-    localStorage.setItem("salidaLiquidos", JSON.stringify({folio,fecha,entrega,recibe,destino}));
+      if (!entrega || !recibe || !destino) {
+        alert("⚠️ Por favor completa todos los campos.");
+        return;
+      }
 
-    // Ir a la pantalla 2
-    window.location.href = "pantalla2.html";
-  }
+      // Guardar agrupado
+      localStorage.setItem("salidaLiquidos", JSON.stringify({folio,fecha,entrega,recibe,destino}));
 
-  window.guardarDatos = guardarDatos;
-</script>
+      // Ir a la pantalla 2
+      window.location.href = "pantalla2.html";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      cargarFolio();
+      ponerFechaHoy();
+    });
+  </script>
 </body>
 </html>
