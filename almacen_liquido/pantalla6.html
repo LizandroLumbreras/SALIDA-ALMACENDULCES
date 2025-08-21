@@ -135,10 +135,23 @@
     const db = firebase.firestore();
 
     // Recuperar datos
-    const datos = JSON.parse(localStorage.getItem("salidaLiquidos")) || {};
-    const carrito = JSON.parse(localStorage.getItem("carrito_liquidos") || "[]");
-    const firmaEntrega = localStorage.getItem("firmaEntregaLiquidos") || "";
-    const firmaRecibe  = localStorage.getItem("firmaRecibeLiquidos") || "";
+   // Recuperar datos
+const datos   = JSON.parse(localStorage.getItem("salidaLiquidos")) || {};
+const carrito = JSON.parse(localStorage.getItem("carrito_liquidos") || "[]");
+
+// 🔹 Función flexible para leer la firma desde varias claves
+function leerFirma(keys) {
+  for (const k of keys) {
+    const v = localStorage.getItem(k);
+    if (v && v.startsWith("data:image")) return v;
+  }
+  return "";
+}
+
+// 🔹 Recuperar firmas con soporte a nombres distintos
+const firmaEntrega = leerFirma(["firma_entrega_liquidos", "firmaEntregaLiquidos"]);
+const firmaRecibe  = leerFirma(["firma_recibe_liquidos", "firmaRecibeLiquidos"]);
+
 
     // Pintar en resumen
     document.getElementById("folioResumen").textContent   = datos.folio || "";
