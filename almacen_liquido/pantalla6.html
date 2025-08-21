@@ -222,7 +222,7 @@
       pdf.save(nombre);
     }
 
-    // Acción completa
+    // Acción completa con redirección
     async function guardarYDescargar() {
       if (!carrito || carrito.length === 0) {
         alert("⚠️ No hay productos en el resumen.");
@@ -232,6 +232,12 @@
         await guardarEnFirebase();
         await descargarPDF();
         alert("✅ Guardado en Firebase y PDF descargado");
+
+        // 🔹 Redirigir automáticamente al index después de 2 segundos
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 2000);
+
       } catch (e) {
         alert("❌ Error: " + e.message);
       }
