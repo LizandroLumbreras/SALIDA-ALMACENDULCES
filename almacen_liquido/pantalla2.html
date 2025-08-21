@@ -1,98 +1,97 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Salida – Almacén Líquidos (Pantalla 2)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <title>Buscar productos - Líquidos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
-      font-family: 'Poppins', sans-serif;
-      margin: 0;
+      font-family: Arial, sans-serif;
       background: linear-gradient(to right, #00416A, #E4E5E6);
-      color: #111;
+      margin: 0;
+      padding: 20px;
+      color: white;
       min-height: 100vh;
-      padding: 20px;
+      box-sizing: border-box;
+      position: relative;
     }
-    h2 {
-      text-align: center;
-      color: #00416A;
+    .marca-agua {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.07;
+      z-index: 0;
+      max-width: 90%;
+      pointer-events: none;
     }
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 20px;
-      max-width: 900px;
+    .contenedor {
+      max-width: 700px;
       margin: auto;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 20px;
+      z-index: 1;
+      position: relative;
     }
-    input {
+    h2 { text-align: center; margin-bottom: 20px; }
+    input[type="text"], input[type="number"] {
       width: 100%;
       padding: 10px;
-      margin-bottom: 12px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 15px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 12px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background: #00416A;
-      color: white;
-    }
-    button {
-      padding: 10px 16px;
+      margin: 10px 0;
+      border-radius: 6px;
       border: none;
-      border-radius: 8px;
-      background: #00416A;
+      font-size: 16px;
+    }
+    .info-producto {
+      background: white;
+      color: black;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 10px;
+      display: none;
+    }
+    .info-producto strong { display: block; margin-bottom: 5px; }
+    button {
+      background-color: #e60000;
       color: white;
-      font-size: 15px;
+      border: none;
+      padding: 12px;
+      width: 100%;
+      border-radius: 6px;
+      font-size: 16px;
       cursor: pointer;
-      margin-top: 15px;
+      margin-top: 10px;
     }
-    button:hover {
-      background: #0066aa;
-    }
+    button:hover { background-color: #b00000; }
+    .ayuda { font-size: 12px; opacity: .9; margin-top: -6px; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2>Buscar y Agregar Productos – Almacén Líquidos</h2>
+  <img src="logo_proveedora.webp" class="marca-agua" alt="Marca de agua">
 
-    <!-- Buscador -->
-    <input type="text" id="buscador" placeholder="Buscar por código o nombre..."
-           oninput="buscarProducto()" onkeypress="if(event.key==='Enter'){buscarProducto()}">
+  <div class="contenedor">
+    <h2>Buscar producto</h2>
+    <p class="ayuda">
+      Escribe un <b>código</b> o el <b>inicio</b> del nombre (ej. "AGUA", "REFRESCO", "ACEITE").
+    </p>
+    <input type="text" id="buscador" placeholder="Buscar por código o nombre...">
 
-    <!-- Resultados -->
-    <table>
-      <thead>
-        <tr>
-          <th>Código</th>
-          <th>Descripción</th>
-          <th>Unidad</th>
-          <th>Cantidad</th>
-          <th>Acción</th>
-        </tr>
-      </thead>
-      <tbody id="tablaResultados"></tbody>
-    </table>
+    <div class="info-producto" id="infoProducto">
+      <strong id="descripcion"></strong>
+      <div id="codigo"></div>
+      <input type="number" id="cantidad" placeholder="Cantidad a retirar" step="0.001" min="0.001">
+      <button id="btnAgregar">Agregar</button>
+    </div>
 
-    <button onclick="continuar()">Continuar →</button>
+    <button id="verCarritoBtn" onclick="irAlCarrito()" style="display:none;">Ver Carrito 🛒</button>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    // 🔹 Configuración Firebase
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script>
+    // ===== Firebase =====
     const firebaseConfig = {
       apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
       authDomain: "inventariopv-643f1.firebaseapp.com",
@@ -101,90 +100,124 @@
       messagingSenderId: "96242533231",
       appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // ===== Estado =====
+    let productoSeleccionado = null;
 
-    let productos = [];
-    let carrito = JSON.parse(localStorage.getItem("carrito_liquidos")) || [];
+    // ===== Utils =====
+    const pad13 = (s) => String(s).replace(/\s+/g,'').padStart(13,'0');
+    const normCod = (s) => String(s).trim().replace(/\s+/g, '');
+    const toUpper = (s) => String(s||'').toUpperCase();
 
-    // Cargar productos de Firebase
-    async function cargarProductos() {
-      const querySnapshot = await getDocs(collection(db, "productos"));
-      productos = [];
-      querySnapshot.forEach(doc => {
-        productos.push(doc.data());
-      });
-      console.log("✅ Productos cargados:", productos.length);
+    // ===== Render =====
+    function mostrarProducto(p) {
+      productoSeleccionado = p;
+      document.getElementById('descripcion').textContent = p.concepto || 'Sin descripción';
+      document.getElementById('codigo').textContent = 'Código: ' + (p.codigoBarra || p.id || '');
+      document.getElementById('cantidad').value = '';
+      document.getElementById('infoProducto').style.display = 'block';
+      document.getElementById('cantidad').focus();
+    }
+    function ocultarProducto() {
+      productoSeleccionado = null;
+      document.getElementById('infoProducto').style.display = 'none';
+    }
+    function actualizarBotonCarrito() {
+      const productos = JSON.parse(localStorage.getItem('carrito_liquidos') || '[]');
+      document.getElementById('verCarritoBtn').style.display = productos.length > 0 ? 'block' : 'none';
     }
 
-   // Buscar producto
-window.buscarProducto = function () {
-  const texto = document.getElementById("buscador").value.trim().toLowerCase();
-  const tabla = document.getElementById("tablaResultados");
-  tabla.innerHTML = "";
+    // ===== Búsqueda (ABIERTA, sin filtrar por departamento) =====
+    document.getElementById('buscador').addEventListener('input', async function() {
+      const texto = this.value.trim();
+      if (texto.length < 2) { ocultarProducto(); return; }
 
-  if (!texto) return;
+      try {
+        const tCod = normCod(texto);
 
-  let resultados = [];
+        // ---------- 1) BÚSQUEDA POR CÓDIGO ----------
+        if (/^\d+$/.test(tCod)) {
+          // a) Por docId
+          const byId = await db.collection('productos').doc(tCod).get();
+          if (byId.exists) {
+            mostrarProducto({ id: byId.id, ...byId.data() });
+            return;
+          }
 
-  // Si es número largo → buscar exacto
-  if (!isNaN(texto) && texto.length >= 6) {
-    resultados = productos.filter(p =>
-      p.codigoBarra?.toString() === texto   // 👈 aquí uso codigoBarra
-    );
-  } else {
-    // Si es texto → buscar parcial
-    resultados = productos.filter(p =>
-      p.codigoBarra?.toString().includes(texto) ||
-      p.concepto?.toLowerCase().includes(texto)  // 👈 aquí uso concepto
-    );
-  }
+          // b) Por campo codigoBarra (exacto y variante a 13 dígitos)
+          const v1 = tCod;
+          const v2 = pad13(tCod);
 
-  if (resultados.length === 0) {
-    tabla.innerHTML = `<tr><td colspan="5">❌ Producto no encontrado</td></tr>`;
-    return;
-  }
+          let q = await db.collection('productos')
+            .where('codigoBarra','==', v1)
+            .limit(1).get();
 
-  resultados.forEach(prod => {
-    const fila = document.createElement("tr");
-    fila.innerHTML = `
-      <td>${prod.codigoBarra || ""}</td>
-      <td>${prod.concepto || ""}</td>
-      <td>${prod.unidad || ""}</td>
-      <td><input type="number" min="1" value="1" id="cant-${prod.codigoBarra}"></td>
-      <td><button onclick='agregar("${prod.codigoBarra}")'>Agregar</button></td>
-    `;
-    tabla.appendChild(fila);
-  });
-};
+          if (q.empty && v2 !== v1) {
+            q = await db.collection('productos')
+              .where('codigoBarra','==', v2)
+              .limit(1).get();
+          }
 
-   // Agregar producto al carrito
-window.agregar = function (codigo) {
-  const cantidad = parseInt(document.getElementById(`cant-${codigo}`).value);
-  const prod = productos.find(p => p.codigoBarra == codigo);
+          if (!q.empty) {
+            const doc = q.docs[0];
+            mostrarProducto({ id: doc.id, ...doc.data() });
+            return;
+          }
+        }
 
-  if (prod) {
-    carrito.push({
-      codigo: prod.codigoBarra,
-      descripcion: prod.concepto,   // 👈 aquí uso concepto
-      unidad: prod.unidad || "",
-      cantidad
+        // ---------- 2) BÚSQUEDA POR NOMBRE (prefijo) ----------
+        const pref = toUpper(texto);
+        const q2 = await db.collection('productos')
+          .where('concepto','>=', pref)
+          .where('concepto','<=', pref + '\uf8ff')
+          .limit(20).get();
+
+        if (!q2.empty) {
+          const doc = q2.docs[0];
+          mostrarProducto({ id: doc.id, ...doc.data() });
+        } else {
+          ocultarProducto();
+        }
+      } catch(e){
+        console.error('[ERROR búsqueda]', e);
+        ocultarProducto();
+      }
     });
-    localStorage.setItem("carrito_liquidos", JSON.stringify(carrito));
-    alert(`✅ ${prod.concepto} agregado al carrito`);
-  }
-};
 
-    // Continuar a pantalla3
-    window.continuar = function () {
-      localStorage.setItem("carrito_liquidos", JSON.stringify(carrito));
-      window.location.href = "pantalla3.html";
-    };
+    // ===== Agregar al carrito (usa carrito_liquidos) =====
+    document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
+    function agregarProducto() {
+      const cantidad = parseFloat(document.getElementById('cantidad').value);
+      if (!cantidad || cantidad <= 0 || !productoSeleccionado) {
+        alert('Verifica los datos');
+        return;
+      }
+      const d = productoSeleccionado;
+      const unidad = d.unidadMedidaSat || d.unidad || d.uMedida || 'N/D';
 
-    // Inicializar carga
-    cargarProductos();
+      const productos = JSON.parse(localStorage.getItem('carrito_liquidos') || '[]');
+      productos.push({
+        id: d.id,
+        codigo: d.codigoBarra || d.id || '',
+        descripcion: d.concepto || 'Sin descripción',
+        unidad: unidad,
+        cantidad: cantidad
+      });
+      localStorage.setItem('carrito_liquidos', JSON.stringify(productos));
+
+      ocultarProducto();
+      document.getElementById('buscador').value = '';
+      document.getElementById('cantidad').value = '';
+      actualizarBotonCarrito();
+    }
+
+    function irAlCarrito(){ window.location.href='pantalla3.html'; }
+    window.irAlCarrito = irAlCarrito;
+
+    // Init
+    actualizarBotonCarrito();
   </script>
 </body>
 </html>
-
