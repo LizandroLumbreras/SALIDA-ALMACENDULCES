@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Buscar productos - Dulces</title>
   <style>
@@ -36,32 +36,18 @@
     }
     h2 { text-align: center; margin-bottom: 20px; }
     input[type="text"], input[type="number"] {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 6px;
-      border: none;
-      font-size: 16px;
+      width: 100%; padding: 10px; margin: 10px 0;
+      border-radius: 6px; border: none; font-size: 16px;
     }
     .info-producto {
-      background: white;
-      color: black;
-      padding: 15px;
-      border-radius: 10px;
-      margin-top: 10px;
-      display: none;
+      background: white; color: black; padding: 15px;
+      border-radius: 10px; margin-top: 10px; display: none;
     }
     .info-producto strong { display: block; margin-bottom: 5px; }
     button {
-      background-color: #e60000;
-      color: white;
-      border: none;
-      padding: 12px;
-      width: 100%;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
-      margin-top: 10px;
+      background-color: #e60000; color: white; border: none;
+      padding: 12px; width: 100%; border-radius: 6px; font-size: 16px;
+      cursor: pointer; margin-top: 10px;
     }
     button:hover { background-color: #b00000; }
     .ayuda { font-size: 12px; opacity: .9; margin-top: -6px; }
@@ -69,10 +55,16 @@
 </head>
 <body>
   <img src="logo_proveedora.webp" class="marca-agua" alt="Marca de agua">
+
   <div class="contenedor">
     <h2>Buscar producto</h2>
     <p class="ayuda">Escribe un <b>código</b> o el <b>inicio</b> del nombre (ej. "PALETA", "CHICLE").</p>
-    <input type="text" id="buscador" placeholder="Buscar por código o nombre...">
+
+    <input
+      type="text" id="buscador"
+      placeholder="Buscar por código o nombre..."
+      autofocus autocomplete="off" autocapitalize="off" spellcheck="false"
+    >
 
     <div class="info-producto" id="infoProducto">
       <strong id="descripcion"></strong>
@@ -100,20 +92,20 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // ===== Config búsqueda =====
+    // ===== Config búsqueda (DULCES) =====
     const DEPTS_DULCES = ["DULCESIEPS", "CHICLEGRAVADO", "DULCESEXENTOS"];
 
     // ===== Estado =====
     let productoSeleccionado = null;
 
     // ===== Utils =====
-    const pad13 = (s) => String(s).replace(/\s+/g,'').padStart(13,'0');
-    const normCod = (s) => String(s).trim().replace(/\s+/g, '');
+    const pad13   = (s) => String(s).replace(/\s+/g,'').padStart(13,'0');
+    const normCod = (s) => String(s).trim().replace(/[\s\r\n]+/g, '');
     const toUpper = (s) => String(s||'').toUpperCase();
 
     function esValido(d) {
       if (!d) return false;
-      if (d.activo === false) return false; // solo activos
+      if (d.activo === false) return false;
       const dep = String(d.departamento || "").toUpperCase();
       return DEPTS_DULCES.includes(dep);
     }
@@ -136,49 +128,94 @@
       document.getElementById('verCarritoBtn').style.display = productos.length > 0 ? 'block' : 'none';
     }
 
-    // ===== Búsqueda =====
-    document.getElementById('buscador').addEventListener('input', async function() {
-      const texto = this.value.trim();
-      if (texto.length < 2) { ocultarProducto(); return; }
+    // ===== Anti-rebote escáner + debounce de nombre =====
+    const buscador = document.getElementById('buscador');
+    const SCAN_DEBOUNCE_MS = 700;
+    let lastScanCode = '';
+    let lastScanAt = 0;
 
+    let typingTimer = null;
+    const TYPE_DEBOUNCE_MS = 300;
+
+    window.addEventListener('DOMContentLoaded', () => buscador.focus());
+
+    // ENTER -> escáner (código)
+    buscador.addEventListener('keydown', async (e) => {
+      if (e.key !== 'Enter') return;
+
+      const raw = buscador.value.replace(/[\r\n]+/g, '');
+      const tCod = normCod(raw);
+      buscador.value = ''; // limpia inmediatamente
+
+      if (!tCod) return;
+
+      const now = Date.now();
+      if (tCod === lastScanCode && (now - lastScanAt) < SCAN_DEBOUNCE_MS) return;
+      lastScanCode = tCod; lastScanAt = now;
+
+      if (/^\d+$/.test(tCod)) {
+        const ok = await buscarPorCodigoDulces(tCod);
+        if (!ok) await buscarPorNombreDulces(tCod);
+      } else {
+        await buscarPorNombreDulces(tCod);
+      }
+    });
+
+    // Escritura manual -> nombre (debounce)
+    buscador.addEventListener('input', () => {
+      const val = buscador.value.trim();
+      if (typingTimer) clearTimeout(typingTimer);
+      if (val.length < 2) { ocultarProducto(); return; }
+      if (/^\d{6,}$/.test(val)) return; // parece código -> espera Enter
+
+      typingTimer = setTimeout(async () => {
+        await buscarPorNombreDulces(val);
+      }, TYPE_DEBOUNCE_MS);
+    });
+
+    // ===== Helpers con filtros activo + departamento =====
+    async function buscarPorCodigoDulces(code) {
       try {
-        const tCod = normCod(texto);
-
-        // ---------- 1) BÚSQUEDA POR CÓDIGO ----------
-        if (/^\d+$/.test(tCod)) {
-          // a) Por docId (no se puede filtrar server-side, validamos después)
-          const byId = await db.collection('productos').doc(tCod).get();
-          if (byId.exists && esValido(byId.data())) {
-            mostrarProducto({ id: byId.id, ...byId.data() });
-            return;
-          }
-
-          // b) Por campo codigoBarra (con filtros en servidor)
-          const v1 = tCod;
-          const v2 = pad13(tCod);
-
-          let q = await db.collection('productos')
-            .where('activo','==', true)
-            .where('departamento','in', DEPTS_DULCES)
-            .where('codigoBarra','==', v1)
-            .limit(1).get();
-
-          if (q.empty && v2 !== v1) {
-            q = await db.collection('productos')
-              .where('activo','==', true)
-              .where('departamento','in', DEPTS_DULCES)
-              .where('codigoBarra','==', v2)
-              .limit(1).get();
-          }
-
-          if (!q.empty) {
-            const doc = q.docs[0]; const d = doc.data();
-            mostrarProducto({ id: doc.id, ...d });
-            return;
-          }
+        // a) DocID (validación client-side)
+        const byId = await db.collection('productos').doc(code).get();
+        if (byId.exists && esValido(byId.data())) {
+          mostrarProducto({ id: byId.id, ...byId.data() });
+          return true;
         }
 
-        // ---------- 2) BÚSQUEDA POR NOMBRE (prefijo) ----------
+        // b) Campo codigoBarra exacto + pad13 (filtrado server-side)
+        const v1 = code, v2 = pad13(code);
+
+        let q = await db.collection('productos')
+          .where('activo','==', true)
+          .where('departamento','in', DEPTS_DULCES)
+          .where('codigoBarra','==', v1)
+          .limit(1).get();
+
+        if (q.empty && v2 !== v1) {
+          q = await db.collection('productos')
+            .where('activo','==', true)
+            .where('departamento','in', DEPTS_DULCES)
+            .where('codigoBarra','==', v2)
+            .limit(1).get();
+        }
+
+        if (!q.empty) {
+          const doc = q.docs[0];
+          mostrarProducto({ id: doc.id, ...doc.data() });
+          return true;
+        }
+        ocultarProducto();
+        return false;
+      } catch (e) {
+        console.error('[ERROR buscarPorCodigoDulces]', e);
+        ocultarProducto();
+        return false;
+      }
+    }
+
+    async function buscarPorNombreDulces(texto) {
+      try {
         const pref = toUpper(texto);
         const q2 = await db.collection('productos')
           .where('activo','==', true)
@@ -193,14 +230,13 @@
         } else {
           ocultarProducto();
         }
-      } catch(e){
-        // Si Firestore pide índice compuesto, mostrará el link en consola
-        console.error('[ERROR búsqueda]', e);
+      } catch (e) {
+        console.error('[ERROR buscarPorNombreDulces]', e);
         ocultarProducto();
       }
-    });
+    }
 
-    // ===== Agregar al carrito =====
+    // ===== Agregar al carrito (Dulces) =====
     document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
     function agregarProducto() {
       const cantidad = parseFloat(document.getElementById('cantidad').value);
@@ -224,6 +260,7 @@
       ocultarProducto();
       document.getElementById('buscador').value = '';
       document.getElementById('cantidad').value = '';
+      buscador.focus();
       actualizarBotonCarrito();
     }
 
