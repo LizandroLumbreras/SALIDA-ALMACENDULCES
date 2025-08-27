@@ -144,6 +144,40 @@
       localStorage.clear();
       window.location.href = "index.html";
     };
+// 🚨 Notificación con el bot "Star Salida Dulce"
+async function notificarStarDulce(salida) {
+  try {
+    const token = "8083018476:AAFXEdpxhVA6wjz2fQEOktxPFxq8zmc6X20"; // ✅ Token nuevo
+    const chatId = "6617988297"; // ✅ Tu chat_id
+
+    let mensaje = `🍬 Nueva salida registrada en Almacén Dulces\n\n`;
+    mensaje += `📄 Folio: ${salida.folio}\n`;
+    mensaje += `📅 Fecha: ${salida.fecha}\n`;
+    mensaje += `👤 Entrega: ${salida.entrega}\n`;
+    mensaje += `🤝 Recibe: ${salida.recibe}\n`;
+    mensaje += `📍 Destino: ${salida.destino}\n\n`;
+
+    if (Array.isArray(salida.productos) && salida.productos.length > 0) {
+      mensaje += `📦 Productos:\n`;
+      salida.productos.forEach(p => {
+        mensaje += `• ${p.cantidad} x ${p.descripcion} (Código: ${p.codigo})\n`;
+      });
+    } else {
+      mensaje += `⚠️ No hay productos registrados.\n`;
+    }
+
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: mensaje
+      })
+    });
+  } catch (e) {
+    console.warn("No se pudo notificar por Telegram:", e);
+  }
+}
 
     // Guarda en Firestore
     async function guardarSalida() {
@@ -164,6 +198,8 @@
       } else {
         await folioDoc.set({ ultimo: 2 });
       }
+    // 🔔 Notificar por Telegram
+      await notificarStarDulce(data);
     }
 
     function preload(imgEl){
