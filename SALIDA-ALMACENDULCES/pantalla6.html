@@ -160,11 +160,23 @@ async function notificarStarDulce(salida) {
     if (Array.isArray(salida.productos) && salida.productos.length > 0) {
       mensaje += `📦 Productos:\n`;
       salida.productos.forEach(p => {
-        mensaje += `• ${p.cantidad} x ${p.descripcion} (Código: ${p.codigo})\n`;
-      });
+        mensaje += `• ${p.cantidad} x ${p.descripcion}\n`;
+    });
     } else {
       mensaje += `⚠️ No hay productos registrados.\n`;
     }
+    // ✨ Frases motivacionales de Star
+const frasesStar = [
+  "🏹✨ Star apunta siempre al orden, cada salida nos acerca a la victoria.",
+  "📚 La disciplina es el arco que dispara el progreso. – Star",
+  "🏹 Cada registro es una flecha que fortalece al sistema. – Star",
+  "📖 La bibliotecaria nunca olvida, cada salida queda guardada en la historia.",
+  "🌟 Sigue adelante, el orden es poder. – Star"
+];
+
+// Escoge una frase aleatoria
+const frase = frasesStar[Math.floor(Math.random() * frasesStar.length)];
+mensaje += `\n\n${frase}`;
 
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
