@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Buscar productos - Dulces</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -52,7 +51,6 @@
     }
     button:hover { background-color: #b00000; }
     .ayuda { font-size: 12px; opacity: .9; margin-top: -6px; }
-    #lectorQR { width: 100%; margin-top: 15px; display: none; }
   </style>
 </head>
 <body>
@@ -60,11 +58,13 @@
 
   <div class="contenedor">
     <h2>Buscar producto</h2>
-    <p class="ayuda">Escribe un <b>código</b>, un <b>nombre</b> o escanea con la cámara.</p>
+    <p class="ayuda">Escribe un <b>código</b> o el <b>inicio</b> del nombre (ej. "PALETA", "CHICLE").</p>
 
-    <input type="text" id="buscador" placeholder="Buscar por código o nombre..." autofocus autocomplete="off" autocapitalize="off" spellcheck="false">
-    <button id="btnCamara">📷 Escanear código</button>
-    <div id="lectorQR"></div>
+    <input
+      type="text" id="buscador"
+      placeholder="Buscar por código o nombre..."
+      autofocus autocomplete="off" autocapitalize="off" spellcheck="false"
+    >
 
     <div class="info-producto" id="infoProducto">
       <strong id="descripcion"></strong>
@@ -80,6 +80,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script>
+    // ===== Firebase =====
     const firebaseConfig = {
       apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
       authDomain: "inventariopv-643f1.firebaseapp.com",
@@ -91,28 +92,35 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // ===== Config búsqueda (DULCES) =====
     const DEPTS_DULCES = ["DULCESIEPS", "CHICLEGRAVADO", "DULCESEXENTOS"];
+
+    // ===== Estado =====
     let productoSeleccionado = null;
 
-    const buscador = document.getElementById('buscador');
-    const btnCamara = document.getElementById('btnCamara');
-    const lectorQR = document.getElementById('lectorQR');
-    let scannerActivo = false;
-    let html5QrCode = null;
+    // ===== Utils =====
+    const pad13   = (s) => String(s).replace(/\s+/g,'').padStart(13,'0');
+    const normCod = (s) => String(s).trim().replace(/[\s\r\n]+/g, '');
+    const toUpper = (s) => String(s||'').toUpperCase();
 
-    function variantesCodigo(raw) {
-      const limpio = String(raw).replace(/\s+/g,'');
-      const pad13  = limpio.padStart(13,'0');
-      const sin0   = limpio.replace(/^0+/, '');
-      const set = new Set([limpio, pad13, sin0]);
-      return Array.from(set).filter(Boolean);
-    }
+    // ➕ Variantes del código para cubrir EAN con/sin ceros a la izquierda
+function variantesCodigo(raw){
+  const limpio = String(raw).replace(/\s+/g,'');
+  const pad13  = limpio.padStart(13,'0');
+  const sin0   = limpio.replace(/^0+/, '');
+  const set = new Set([limpio, pad13, sin0]);
+  return Array.from(set).filter(Boolean);
+}
+
+
     function esValido(d) {
       if (!d) return false;
       if (d.activo === false) return false;
       const dep = String(d.departamento || "").toUpperCase();
       return DEPTS_DULCES.includes(dep);
     }
+
+    // ===== Render =====
     function mostrarProducto(p) {
       productoSeleccionado = p;
       document.getElementById('descripcion').textContent = p.concepto || 'Sin descripción';
@@ -130,125 +138,268 @@
       document.getElementById('verCarritoBtn').style.display = productos.length > 0 ? 'block' : 'none';
     }
 
-    async function buscarPorCodigoDulces(code) {
-      const variantes = variantesCodigo(code);
-      for (const v of variantes) {
-        const byId = await db.collection('productos').doc(v).get();
-        if (byId.exists && esValido(byId.data())) {
-          mostrarProducto({ id: byId.id, ...byId.data() }); return true;
-        }
-      }
-      for (const v of variantes) {
-        const q = await db.collection('productos')
-          .where('activo','==',true)
-          .where('departamento','in',DEPTS_DULCES)
-          .where('codigoBarra','==',v)
-          .limit(1).get();
-        if (!q.empty) { const doc = q.docs[0]; mostrarProducto({ id:doc.id, ...doc.data() }); return true; }
-      }
-      ocultarProducto(); return false;
-    }
-function toUpper(s) {
-  return String(s || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '');
+// ===== CONFIG ANTI-DUP =====
+const SCAN_DEBOUNCE_MS = 800;
+const TYPE_DEBOUNCE_MS = 300;
+
+// ⬇️  MOVER buscador AFUERA del if para que sea visible en todo el archivo
+const buscador = document.getElementById('buscador');
+
+if (!window.__scannerHandlersBound) {
+  window.__scannerHandlersBound = true;
+
+  let lastScanCode = '';
+  let lastScanAt = 0;
+  let typingTimer = null;
+  let processing = false;
+
+  window.addEventListener('DOMContentLoaded', () => buscador && buscador.focus());
+
+  // === ESCÁNER: Enter o Tab ===
+  buscador.addEventListener('keydown', async (e) => {
+    const isSubmitKey = (e.key === 'Enter' || e.key === 'Tab' || e.code === 'NumpadEnter');
+    if (!isSubmitKey) return;
+    if (e.repeat) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const raw = (buscador.value || '').replace(/[\r\n\t]+/g, '');
+    const tCod = (raw.trim()).replace(/\s+/g, '');
+    buscador.value = '';
+
+    if (!tCod) return;
+
+    const now = Date.now();
+    if (tCod === lastScanCode && (now - lastScanAt) < SCAN_DEBOUNCE_MS) return;
+    if (processing) return;
+
+    lastScanCode = tCod;
+    lastScanAt = now;
+    processing = true;
+
+try {
+  if (/^\d+$/.test(tCod)) {
+    // 1) Dulces por código
+    let ok = await buscarPorCodigoDulces(tCod);
+    // 2) Fallback equivalente por código
+    if (!ok) ok = await buscarEquivalenteCodigo(tCod);
+    // 3) Último recurso: nombre en Dulces
+    if (!ok) ok = await buscarPorNombreDulces(tCod);
+    // 4) Último-último: nombre equivalente
+    if (!ok) await buscarEquivalenteNombre(tCod);
+  } else {
+    // texto: nombre
+    let ok = await buscarPorNombreDulces(tCod);
+    if (!ok) await buscarEquivalenteNombre(tCod);
+  }
+} catch (err) {
+  console.error('[scanner handler]', err);
+} finally {
+  processing = false;
 }
+}); // 👈 cierra el addEventListener('keydown', …)
 
-    document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
-async function buscarPorNombreDulces(texto) {
+  // === TECLADO MANUAL: búsqueda por nombre con debounce ===
+  buscador.addEventListener('input', () => {
+    if (typingTimer) clearTimeout(typingTimer);
+
+    const val = (buscador.value || '').trim();
+    if (val.length < 2) {
+      if (typeof ocultarProducto === 'function') ocultarProducto();
+      return;
+    }
+    if (/^\d{6,}$/.test(val)) return;
+
+   typingTimer = setTimeout(async () => {
   try {
-    const pref = toUpper(texto);
+    let ok = await buscarPorNombreDulces(val);
+    if (!ok) await buscarEquivalenteNombre(val);
+  } catch (err) {
+    console.error('[typing debounce]', err);
+    ocultarProducto();
+  }
+}, TYPE_DEBOUNCE_MS);
+   });
+  buscador.addEventListener('change', () => {
+    buscador.value = (buscador.value || '').replace(/[\r\n\t]+/g, '');
+  });
+}
+    // ===== Helpers con filtros activo + departamento =====
+    async function buscarPorCodigoDulces(code) {
+  try {
+    const variantes = variantesCodigo(code);
 
-    // Trae los primeros 100 productos activos para buscar localmente
-    const q = await db.collection('productos')
-      .where('activo', '==', true)
-      .limit(100)
-      .get();
-
-    if (q.empty) {
-      ocultarProducto();
-      return false;
+    // a) DocID exacto (probando variantes)
+    for (const v of variantes) {
+      const byId = await db.collection('productos').doc(v).get();
+      if (byId.exists && esValido(byId.data())) {
+        mostrarProducto({ id: byId.id, ...byId.data() });
+        return true;
+      }
     }
 
-    // Normaliza y filtra manualmente
-    const coincidencias = q.docs.filter(d => {
-      const data = d.data();
-      const nombre = toUpper(data.concepto || '');
-      const dep = toUpper(data.departamento || '');
-      return (
-        DEPTS_DULCES.includes(dep) &&
-        nombre.includes(pref) // coincidencia parcial
-      );
-    });
-
-    if (coincidencias.length > 0) {
-      // Muestra el primer resultado coincidente
-      const doc = coincidencias[0];
-      mostrarProducto({ id: doc.id, ...doc.data() });
-      return true;
-    } else {
-      ocultarProducto();
-      return false;
+    // b) codigoBarra exacto (probando variantes)
+    for (const v of variantes) {
+      const q = await db.collection('productos')
+        .where('activo','==', true)
+        .where('departamento','in', DEPTS_DULCES)
+        .where('codigoBarra','==', v)
+        .limit(1).get();
+      if (!q.empty) {
+        const doc = q.docs[0];
+        mostrarProducto({ id: doc.id, ...doc.data() });
+        return true;
+      }
     }
 
+    // c) codigosEquivalentes (array-contains)
+    for (const v of variantes) {
+      const q = await db.collection('productos')
+        .where('activo','==', true)
+        .where('departamento','in', DEPTS_DULCES)
+        .where('codigosEquivalentes','array-contains', v)
+        .limit(1).get();
+      if (!q.empty) {
+        const doc = q.docs[0];
+        mostrarProducto({ id: doc.id, ...doc.data() });
+        return true;
+      }
+    }
+
+    ocultarProducto();
+    return false;
   } catch (e) {
-    console.error('[ERROR buscarPorNombreDulces]', e);
+    console.error('[ERROR buscarPorCodigoDulces]', e);
+    ocultarProducto();
+    return false;
+  }
+}
+    async function buscarPorNombreDulces(texto) {
+      try {
+        const pref = toUpper(texto);
+        const q2 = await db.collection('productos')
+          .where('activo','==', true)
+          .where('departamento','in', DEPTS_DULCES)
+          .where('concepto','>=', pref)
+          .where('concepto','<=', pref + '\uf8ff')
+          .limit(20).get();
+
+        if (!q2.empty) {
+          const doc = q2.docs[0];
+          mostrarProducto({ id: doc.id, ...doc.data() });
+        } else {
+          ocultarProducto();
+        }
+      } catch (e) {
+        console.error('[ERROR buscarPorNombreDulces]', e);
+        ocultarProducto();
+      }
+    }
+// 🔁 Fallback: catálogo equivalente (sin filtro de departamento)
+async function buscarEquivalenteCodigo(code) {
+  try {
+    const variantes = variantesCodigo(code);
+
+    // a) DocID
+    for (const v of variantes) {
+      const byId = await db.collection('productos').doc(v).get();
+      if (byId.exists && byId.data()?.activo !== false) {
+        mostrarProducto({ id: byId.id, ...byId.data() });
+        return true;
+      }
+    }
+
+    // b) codigoBarra
+    for (const v of variantes) {
+      const q = await db.collection('productos')
+        .where('activo','==', true)
+        .where('codigoBarra','==', v)
+        .limit(1).get();
+      if (!q.empty) {
+        const doc = q.docs[0];
+        mostrarProducto({ id: doc.id, ...doc.data() });
+        return true;
+      }
+    }
+
+    // c) codigosEquivalentes
+    for (const v of variantes) {
+      const q = await db.collection('productos')
+        .where('activo','==', true)
+        .where('codigosEquivalentes','array-contains', v)
+        .limit(1).get();
+      if (!q.empty) {
+        const doc = q.docs[0];
+        mostrarProducto({ id: doc.id, ...doc.data() });
+        return true;
+      }
+    }
+
+    ocultarProducto();
+    return false;
+  } catch (e) {
+    console.error('[ERROR buscarEquivalenteCodigo]', e);
     ocultarProducto();
     return false;
   }
 }
 
+async function buscarEquivalenteNombre(texto) {
+  try {
+    const pref = toUpper(texto);
+    const q = await db.collection('productos')
+      .where('activo','==', true)
+      .where('concepto','>=', pref)
+      .where('concepto','<=', pref + '\uf8ff')
+      .limit(20).get();
+
+    if (!q.empty) {
+      const doc = q.docs[0];
+      mostrarProducto({ id: doc.id, ...doc.data() });
+      return true;
+    }
+    ocultarProducto();
+    return false;
+  } catch (e) {
+    console.error('[ERROR buscarEquivalenteNombre]', e);
+    ocultarProducto();
+    return false;
+  }
+}
+
+    // ===== Agregar al carrito (Dulces) =====
+    document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
     function agregarProducto() {
       const cantidad = parseFloat(document.getElementById('cantidad').value);
-      if (!cantidad || cantidad <= 0 || !productoSeleccionado) { alert('Verifica los datos'); return; }
+      if (!cantidad || cantidad <= 0 || !productoSeleccionado) {
+        alert('Verifica los datos');
+        return;
+      }
       const d = productoSeleccionado;
       const unidad = d.unidadMedidaSat || d.unidad || d.uMedida || 'N/D';
+
       const productos = JSON.parse(localStorage.getItem('productosSeleccionados') || '[]');
-      productos.push({ id:d.id, codigo:d.codigoBarra||d.id||'', descripcion:d.concepto||'Sin descripción', unidad, cantidad });
+      productos.push({
+        id: d.id,
+        codigo: d.codigoBarra || d.id || '',
+        descripcion: d.concepto || 'Sin descripción',
+        unidad: unidad,
+        cantidad: cantidad
+      });
       localStorage.setItem('productosSeleccionados', JSON.stringify(productos));
-      ocultarProducto(); buscador.value=''; buscador.focus(); actualizarBotonCarrito();
+
+      ocultarProducto();
+      document.getElementById('buscador').value = '';
+      document.getElementById('cantidad').value = '';
+      buscador.focus();
+      actualizarBotonCarrito();
     }
 
     function irAlCarrito(){ window.location.href='pantalla3.html'; }
+    window.irAlCarrito = irAlCarrito;
+
+    // Init
     actualizarBotonCarrito();
-
-    // === ESCÁNER DE CÁMARA ===
-    btnCamara.addEventListener('click', () => {
-      if (scannerActivo) { detenerCamara(); return; }
-      iniciarCamara();
-    });
-
-    async function iniciarCamara() {
-      if (html5QrCode) return;
-      lectorQR.style.display = 'block';
-      html5QrCode = new Html5Qrcode("lectorQR");
-      try {
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          async (decodedText) => {
-            await buscarPorCodigoDulces(decodedText);
-            detenerCamara();
-          }
-        );
-        scannerActivo = true;
-        btnCamara.textContent = "✖ Cerrar cámara";
-      } catch (err) {
-        alert("No se pudo acceder a la cámara");
-        console.error(err);
-        detenerCamara();
-      }
-    }
-
-    function detenerCamara() {
-      if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-          html5QrCode.clear();
-          lectorQR.style.display = 'none';
-          html5QrCode = null;
-          scannerActivo = false;
-          btnCamara.textContent = "📷 Escanear código";
-        });
-      }
-    }
   </script>
 </body>
 </html>
