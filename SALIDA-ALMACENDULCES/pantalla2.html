@@ -1,164 +1,430 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Buscar productos - Dulces</title>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script> <!-- 📷 añadido -->
   <style>
-    body{font-family:Arial,sans-serif;background:linear-gradient(to right,#00416A,#E4E5E6);
-      margin:0;padding:20px;color:white;min-height:100vh;}
-    .marca-agua{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-      opacity:0.07;z-index:0;max-width:90%;pointer-events:none;}
-    .contenedor{max-width:700px;margin:auto;background:rgba(255,255,255,0.1);
-      border-radius:10px;padding:20px;z-index:1;position:relative;}
-    h2{text-align:center;margin-bottom:20px}
-    .busqueda{display:flex;gap:8px;align-items:center;}
-    .busqueda input{flex:1;padding:10px;border-radius:6px;border:none;font-size:16px;}
-    .busqueda button{background:#0c6cbd;border:none;color:#fff;padding:10px 14px;border-radius:6px;cursor:pointer;font-size:18px;}
-    .busqueda button:hover{background:#084d8a}
-    #camaraContainer{display:none;margin-top:15px;}
-    #reader{width:100%;border-radius:8px;overflow:hidden;}
-    .info-producto{background:#fff;color:#000;padding:15px;border-radius:10px;margin-top:10px;display:none;}
-    button#btnAgregar,#verCarritoBtn{background:#e60000;color:white;border:none;padding:12px;width:100%;border-radius:6px;font-size:16px;cursor:pointer;margin-top:10px;}
-    button#btnAgregar:hover,#verCarritoBtn:hover{background:#b00000}
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #00416A, #E4E5E6);
+      margin: 0;
+      padding: 20px;
+      color: white;
+      min-height: 100vh;
+      box-sizing: border-box;
+      position: relative;
+    }
+    .marca-agua {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.07;
+      z-index: 0;
+      max-width: 90%;
+      pointer-events: none;
+    }
+    .contenedor {
+      max-width: 700px;
+      margin: auto;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 20px;
+      z-index: 1;
+      position: relative;
+    }
+    h2 { text-align: center; margin-bottom: 20px; }
+    .busqueda { display: flex; gap: 8px; align-items: center; } /* 📷 añadido */
+    input[type="text"], input[type="number"] {
+      width: 100%; padding: 10px; margin: 10px 0;
+      border-radius: 6px; border: none; font-size: 16px;
+    }
+    .busqueda input { flex: 1; margin: 10px 0; } /* 📷 añadido */
+    .busqueda button { /* 📷 añadido */
+      background-color: #0c6cbd; border: none; color: white;
+      padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 18px;
+    }
+    .busqueda button:hover { background-color: #084d8a; } /* 📷 añadido */
+    #camaraContainer { display: none; margin-top: 10px; } /* 📷 añadido */
+    #reader { width: 100%; border-radius: 10px; overflow: hidden; } /* 📷 añadido */
+    .info-producto {
+      background: white; color: black; padding: 15px;
+      border-radius: 10px; margin-top: 10px; display: none;
+    }
+    .info-producto strong { display: block; margin-bottom: 5px; }
+    button {
+      background-color: #e60000; color: white; border: none;
+      padding: 12px; width: 100%; border-radius: 6px; font-size: 16px;
+      cursor: pointer; margin-top: 10px;
+    }
+    button:hover { background-color: #b00000; }
+    .ayuda { font-size: 12px; opacity: .9; margin-top: -6px; }
   </style>
 </head>
 <body>
-  <img src="logo_proveedora.webp" class="marca-agua">
+  <img src="logo_proveedora.webp" class="marca-agua" alt="Marca de agua">
+
   <div class="contenedor">
     <h2>Buscar producto</h2>
-    <p>Escribe o escanea el código del producto.</p>
+    <p class="ayuda">Escribe un <b>código</b> o el <b>inicio</b> del nombre (ej. "PALETA", "CHICLE").</p>
 
+    <!-- 📷 barra + botón cámara -->
     <div class="busqueda">
-      <input id="buscador" type="text" placeholder="Buscar por código o nombre..." autocomplete="off" autofocus>
+      <input type="text" id="buscador"
+        placeholder="Buscar por código o nombre..."
+        autofocus autocomplete="off" autocapitalize="off" spellcheck="false">
       <button id="btnCamara">📷</button>
     </div>
 
+    <!-- 📷 contenedor cámara -->
     <div id="camaraContainer">
       <div id="reader"></div>
-      <button id="btnCerrarCamara" style="margin-top:8px;background:#444;">Cerrar cámara</button>
+      <button id="btnCerrarCamara" style="background:#444;">Cerrar cámara</button>
     </div>
 
     <div class="info-producto" id="infoProducto">
       <strong id="descripcion"></strong>
       <div id="codigo"></div>
-      <input type="number" id="cantidad" placeholder="Cantidad" step="0.001" min="0.001">
+      <input type="number" id="cantidad" placeholder="Cantidad a retirar" step="0.001" min="0.001">
       <button id="btnAgregar">Agregar</button>
     </div>
 
     <button id="verCarritoBtn" onclick="irAlCarrito()" style="display:none;">Ver Carrito 🛒</button>
   </div>
 
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
   <script>
-    const firebaseConfig={
-      apiKey:"AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
-      authDomain:"inventariopv-643f1.firebaseapp.com",
-      projectId:"inventariopv-643f1",
-      storageBucket:"inventariopv-643f1.appspot.com",
-      messagingSenderId:"96242533231",
-      appId:"1:96242533231:web:aae75a18fbaf9840529e9a"
+    // ===== Firebase =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
+      authDomain: "inventariopv-643f1.firebaseapp.com",
+      projectId: "inventariopv-643f1",
+      storageBucket: "inventariopv-643f1.appspot.com",
+      messagingSenderId: "96242533231",
+      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
     };
     firebase.initializeApp(firebaseConfig);
-    const db=firebase.firestore();
+    const db = firebase.firestore();
 
-    const DEPTS_DULCES=["DULCESIEPS","CHICLEGRAVADO","DULCESEXENTOS"];
-    let productoSeleccionado=null;
-    const buscador=document.getElementById('buscador');
-    const camaraDiv=document.getElementById('camaraContainer');
-    const btnCamara=document.getElementById('btnCamara');
-    const btnCerrar=document.getElementById('btnCerrarCamara');
-    let html5QrCode=null;
+    const DEPTS_DULCES = ["DULCESIEPS", "CHICLEGRAVADO", "DULCESEXENTOS"];
+    let productoSeleccionado = null;
 
-    function beep(){
-      try{
-        const ctx=new (window.AudioContext||window.webkitAudioContext)();
-        const osc=ctx.createOscillator();const gain=ctx.createGain();
-        osc.connect(gain);gain.connect(ctx.destination);
-        osc.type="square";osc.frequency.value=880;
-        gain.gain.setValueAtTime(0.1,ctx.currentTime);
-        osc.start();osc.stop(ctx.currentTime+0.15);
-      }catch(e){console.warn("No beep",e);}
+    // ===== Utils =====
+    const pad13 = (s) => String(s).replace(/\s+/g, '').padStart(13, '0');
+    const normCod = (s) => String(s).trim().replace(/[\s\r\n]+/g, '');
+    const toUpper = (s) => String(s || '').toUpperCase();
+
+    function variantesCodigo(raw) {
+      const limpio = String(raw).replace(/\s+/g, '');
+      const pad13 = limpio.padStart(13, '0');
+      const sin0 = limpio.replace(/^0+/, '');
+      const set = new Set([limpio, pad13, sin0]);
+      return Array.from(set).filter(Boolean);
     }
 
-    const toUpper=s=>String(s||'').toUpperCase();
-    function esValido(d){return d && d.activo!==false && DEPTS_DULCES.includes(String(d.departamento||'').toUpperCase());}
-    function mostrarProducto(p){
-      productoSeleccionado=p;
-      document.getElementById('descripcion').textContent=p.concepto||'Sin descripción';
-      document.getElementById('codigo').textContent='Código: '+(p.codigoBarra||p.id||'');
-      document.getElementById('infoProducto').style.display='block';
+    function esValido(d) {
+      if (!d) return false;
+      if (d.activo === false) return false;
+      const dep = String(d.departamento || "").toUpperCase();
+      return DEPTS_DULCES.includes(dep);
+    }
+
+    function mostrarProducto(p) {
+      productoSeleccionado = p;
+      document.getElementById('descripcion').textContent = p.concepto || 'Sin descripción';
+      document.getElementById('codigo').textContent = 'Código: ' + (p.codigoBarra || p.id || '');
+      document.getElementById('cantidad').value = '';
+      document.getElementById('infoProducto').style.display = 'block';
       document.getElementById('cantidad').focus();
     }
-    function ocultarProducto(){productoSeleccionado=null;document.getElementById('infoProducto').style.display='none';}
+    function ocultarProducto() {
+      productoSeleccionado = null;
+      document.getElementById('infoProducto').style.display = 'none';
+    }
+    function actualizarBotonCarrito() {
+      const productos = JSON.parse(localStorage.getItem('productosSeleccionados') || '[]');
+      document.getElementById('verCarritoBtn').style.display = productos.length > 0 ? 'block' : 'none';
+    }
 
-    async function buscarPorCodigo(code){
-      try{
-        const variantes=[code,code.padStart(13,'0'),code.replace(/^0+/,'')];
-        for(const v of variantes){
-          const doc=await db.collection('productos').doc(v).get();
-          if(doc.exists && esValido(doc.data())){mostrarProducto({id:doc.id,...doc.data()});return;}
+    const SCAN_DEBOUNCE_MS = 800;
+    const TYPE_DEBOUNCE_MS = 300;
+    const buscador = document.getElementById('buscador');
+
+    if (!window.__scannerHandlersBound) {
+      window.__scannerHandlersBound = true;
+      let lastScanCode = '';
+      let lastScanAt = 0;
+      let typingTimer = null;
+      let processing = false;
+      window.addEventListener('DOMContentLoaded', () => buscador && buscador.focus());
+
+      buscador.addEventListener('keydown', async (e) => {
+        const isSubmitKey = (e.key === 'Enter' || e.key === 'Tab' || e.code === 'NumpadEnter');
+        if (!isSubmitKey) return;
+        if (e.repeat) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const raw = (buscador.value || '').replace(/[\r\n\t]+/g, '');
+        const tCod = (raw.trim()).replace(/\s+/g, '');
+        buscador.value = '';
+        if (!tCod) return;
+        const now = Date.now();
+        if (tCod === lastScanCode && (now - lastScanAt) < SCAN_DEBOUNCE_MS) return;
+        if (processing) return;
+        lastScanCode = tCod;
+        lastScanAt = now;
+        processing = true;
+        try {
+          if (/^\d+$/.test(tCod)) {
+            let ok = await buscarPorCodigoDulces(tCod);
+            if (!ok) ok = await buscarEquivalenteCodigo(tCod);
+            if (!ok) ok = await buscarPorNombreDulces(tCod);
+            if (!ok) await buscarEquivalenteNombre(tCod);
+          } else {
+            let ok = await buscarPorNombreDulces(tCod);
+            if (!ok) await buscarEquivalenteNombre(tCod);
+          }
+        } catch (err) {
+          console.error('[scanner handler]', err);
+        } finally {
+          processing = false;
         }
-        for(const v of variantes){
-          const q=await db.collection('productos')
-            .where('activo','==',true)
-            .where('departamento','in',DEPTS_DULCES)
-            .where('codigoBarra','==',v).limit(1).get();
-          if(!q.empty){mostrarProducto({id:q.docs[0].id,...q.docs[0].data()});return;}
+      });
+
+      buscador.addEventListener('input', () => {
+        if (typingTimer) clearTimeout(typingTimer);
+        const val = (buscador.value || '').trim();
+        if (val.length < 2) {
+          if (typeof ocultarProducto === 'function') ocultarProducto();
+          return;
+        }
+        if (/^\d{6,}$/.test(val)) return;
+        typingTimer = setTimeout(async () => {
+          try {
+            let ok = await buscarPorNombreDulces(val);
+            if (!ok) await buscarEquivalenteNombre(val);
+          } catch (err) {
+            console.error('[typing debounce]', err);
+            ocultarProducto();
+          }
+        }, TYPE_DEBOUNCE_MS);
+      });
+      buscador.addEventListener('change', () => {
+        buscador.value = (buscador.value || '').replace(/[\r\n\t]+/g, '');
+      });
+    }
+
+    async function buscarPorCodigoDulces(code) {
+      try {
+        const variantes = variantesCodigo(code);
+        for (const v of variantes) {
+          const byId = await db.collection('productos').doc(v).get();
+          if (byId.exists && esValido(byId.data())) {
+            mostrarProducto({ id: byId.id, ...byId.data() });
+            return true;
+          }
+        }
+        for (const v of variantes) {
+          const q = await db.collection('productos')
+            .where('activo','==', true)
+            .where('departamento','in', DEPTS_DULCES)
+            .where('codigoBarra','==', v)
+            .limit(1).get();
+          if (!q.empty) {
+            const doc = q.docs[0];
+            mostrarProducto({ id: doc.id, ...doc.data() });
+            return true;
+          }
+        }
+        for (const v of variantes) {
+          const q = await db.collection('productos')
+            .where('activo','==', true)
+            .where('departamento','in', DEPTS_DULCES)
+            .where('codigosEquivalentes','array-contains', v)
+            .limit(1).get();
+          if (!q.empty) {
+            const doc = q.docs[0];
+            mostrarProducto({ id: doc.id, ...doc.data() });
+            return true;
+          }
         }
         ocultarProducto();
-      }catch(e){console.error(e);ocultarProducto();}
+        return false;
+      } catch (e) {
+        console.error('[ERROR buscarPorCodigoDulces]', e);
+        ocultarProducto();
+        return false;
+      }
     }
 
-    buscador.addEventListener('keydown',e=>{
-      if(e.key==='Enter'){buscarPorCodigo(buscador.value.trim());}
+    async function buscarPorNombreDulces(texto) {
+      try {
+        const pref = toUpper(texto);
+        const q2 = await db.collection('productos')
+          .where('activo','==', true)
+          .where('departamento','in', DEPTS_DULCES)
+          .where('concepto','>=', pref)
+          .where('concepto','<=', pref + '\uf8ff')
+          .limit(20).get();
+        if (!q2.empty) {
+          const doc = q2.docs[0];
+          mostrarProducto({ id: doc.id, ...doc.data() });
+        } else ocultarProducto();
+      } catch (e) {
+        console.error('[ERROR buscarPorNombreDulces]', e);
+        ocultarProducto();
+      }
+    }
+
+    async function buscarEquivalenteCodigo(code) {
+      try {
+        const variantes = variantesCodigo(code);
+        for (const v of variantes) {
+          const byId = await db.collection('productos').doc(v).get();
+          if (byId.exists && byId.data()?.activo !== false) {
+            mostrarProducto({ id: byId.id, ...byId.data() });
+            return true;
+          }
+        }
+        for (const v of variantes) {
+          const q = await db.collection('productos')
+            .where('activo','==', true)
+            .where('codigoBarra','==', v)
+            .limit(1).get();
+          if (!q.empty) {
+            const doc = q.docs[0];
+            mostrarProducto({ id: doc.id, ...doc.data() });
+            return true;
+          }
+        }
+        for (const v of variantes) {
+          const q = await db.collection('productos')
+            .where('activo','==', true)
+            .where('codigosEquivalentes','array-contains', v)
+            .limit(1).get();
+          if (!q.empty) {
+            const doc = q.docs[0];
+            mostrarProducto({ id: doc.id, ...doc.data() });
+            return true;
+          }
+        }
+        ocultarProducto();
+        return false;
+      } catch (e) {
+        console.error('[ERROR buscarEquivalenteCodigo]', e);
+        ocultarProducto();
+        return false;
+      }
+    }
+
+    async function buscarEquivalenteNombre(texto) {
+      try {
+        const pref = toUpper(texto);
+        const q = await db.collection('productos')
+          .where('activo','==', true)
+          .where('concepto','>=', pref)
+          .where('concepto','<=', pref + '\uf8ff')
+          .limit(20).get();
+        if (!q.empty) {
+          const doc = q.docs[0];
+          mostrarProducto({ id: doc.id, ...doc.data() });
+          return true;
+        }
+        ocultarProducto();
+        return false;
+      } catch (e) {
+        console.error('[ERROR buscarEquivalenteNombre]', e);
+        ocultarProducto();
+        return false;
+      }
+    }
+
+    document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
+    function agregarProducto() {
+      const cantidad = parseFloat(document.getElementById('cantidad').value);
+      if (!cantidad || cantidad <= 0 || !productoSeleccionado) {
+        alert('Verifica los datos');
+        return;
+      }
+      const d = productoSeleccionado;
+      const unidad = d.unidadMedidaSat || d.unidad || d.uMedida || 'N/D';
+      const productos = JSON.parse(localStorage.getItem('productosSeleccionados') || '[]');
+      productos.push({
+        id: d.id,
+        codigo: d.codigoBarra || d.id || '',
+        descripcion: d.concepto || 'Sin descripción',
+        unidad: unidad,
+        cantidad: cantidad
+      });
+      localStorage.setItem('productosSeleccionados', JSON.stringify(productos));
+      ocultarProducto();
+      document.getElementById('buscador').value = '';
+      document.getElementById('cantidad').value = '';
+      buscador.focus();
+      actualizarBotonCarrito();
+      beep(); // 📷 añadido - beep al agregar
+    }
+
+    function irAlCarrito() { window.location.href = 'pantalla3.html'; }
+    window.irAlCarrito = irAlCarrito;
+
+    actualizarBotonCarrito();
+
+    // 📷 ============== INTEGRACIÓN DE CÁMARA ==============
+    const btnCamara = document.getElementById('btnCamara');
+    const camaraContainer = document.getElementById('camaraContainer');
+    const btnCerrarCamara = document.getElementById('btnCerrarCamara');
+    let html5QrCode = null;
+
+    function beep() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "square";
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+      } catch (e) { console.warn("No beep", e); }
+    }
+
+    btnCamara.addEventListener('click', () => {
+      if (camaraContainer.style.display === 'block') cerrarCamara();
+      else abrirCamara();
     });
 
-    btnCamara.addEventListener('click',()=>{
-      if(camaraDiv.style.display==='block'){cerrarCamara();return;}
-      abrirCamara();
-    });
-
-    async function abrirCamara(){
-      camaraDiv.style.display='block';
-      html5QrCode=new Html5Qrcode("reader");
-      const devices=await Html5Qrcode.getCameras();
-      if(devices.length){
+    async function abrirCamara() {
+      camaraContainer.style.display = 'block';
+      html5QrCode = new Html5Qrcode("reader");
+      const devices = await Html5Qrcode.getCameras();
+      if (devices.length) {
         await html5QrCode.start(
           devices[0].id,
-          {fps:10,qrbox:{width:250,height:250}},
-          code=>{
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          code => {
             beep();
-            buscador.value=code;       // muestra el código en el input
-            buscarPorCodigo(code);     // ejecuta búsqueda
-            html5QrCode.pause();       // pausa temporalmente
-            setTimeout(()=>html5QrCode.resume(),1500);
+            buscador.value = code;
+            buscarPorCodigoDulces(code);
+            html5QrCode.pause();
+            setTimeout(() => html5QrCode.resume(), 1500);
           }
         );
-      }else alert('No se detectó cámara');
+      } else alert('No se detectó cámara');
     }
 
-    async function cerrarCamara(){
-      camaraDiv.style.display='none';
-      if(html5QrCode){await html5QrCode.stop();html5QrCode.clear();}
+    async function cerrarCamara() {
+      camaraContainer.style.display = 'none';
+      if (html5QrCode) { await html5QrCode.stop(); html5QrCode.clear(); }
     }
-    btnCerrar.addEventListener('click',cerrarCamara);
-
-    document.getElementById('btnAgregar').addEventListener('click',()=>{
-      const c=parseFloat(document.getElementById('cantidad').value);
-      if(!c||!productoSeleccionado){alert('Verifica los datos');return;}
-      const d=productoSeleccionado;
-      const lista=JSON.parse(localStorage.getItem('productosSeleccionados')||'[]');
-      lista.push({id:d.id,codigo:d.codigoBarra||d.id,descripcion:d.concepto||'',cantidad:c});
-      localStorage.setItem('productosSeleccionados',JSON.stringify(lista));
-      ocultarProducto();buscador.value='';buscador.focus();
-      document.getElementById('verCarritoBtn').style.display='block';
-      beep(); // sonido al agregar también
-    });
-
-    function irAlCarrito(){window.location.href='pantalla3.html';}
+    btnCerrarCamara.addEventListener('click', cerrarCamara);
   </script>
 </body>
 </html>
