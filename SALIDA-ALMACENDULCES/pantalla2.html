@@ -148,8 +148,46 @@
       }
       ocultarProducto(); return false;
     }
+function toUpper(s) {
+  return String(s || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '');
+}
 
     document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
+    async function buscarPorNombreDulces(texto) {
+  try {
+    const pref = toUpper(texto);
+    const q = await db.collection('productos')
+      .where('activo', '==', true)
+      .orderBy('concepto')
+      .startAt(pref)
+      .endAt(pref + '\uf8ff')
+      .limit(30)
+      .get();
+
+    if (q.empty) {
+      ocultarProducto();
+      return false;
+    }
+
+    // filtra solo dulces
+    const match = q.docs.find(d => {
+      const dep = (d.data().departamento || "").toUpperCase();
+      return DEPTS_DULCES.includes(dep);
+    });
+
+    if (match) {
+      mostrarProducto({ id: match.id, ...match.data() });
+      return true;
+    } else {
+      ocultarProducto();
+      return false;
+    }
+  } catch (e) {
+    console.error('[ERROR buscarPorNombreDulces]', e);
+    ocultarProducto();
+    return false;
+  }
+}
     function agregarProducto() {
       const cantidad = parseFloat(document.getElementById('cantidad').value);
       if (!cantidad || cantidad <= 0 || !productoSeleccionado) { alert('Verifica los datos'); return; }
