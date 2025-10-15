@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Buscar productos - Líquidos</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -34,7 +35,7 @@
       z-index: 1;
       position: relative;
     }
-    h2 { text-align: center; margin-bottom: 20px; }
+    h2 { text-align: center; margin-bottom: 10px; }
     input[type="text"], input[type="number"] {
       width: 100%;
       padding: 10px;
@@ -65,6 +66,12 @@
     }
     button:hover { background-color: #b00000; }
     .ayuda { font-size: 12px; opacity: .9; margin-top: -6px; }
+    #qr-reader {
+      width: 100%;
+      margin: 10px auto;
+      border-radius: 10px;
+      overflow: hidden;
+    }
   </style>
 </head>
 <body>
@@ -73,17 +80,20 @@
   <div class="contenedor">
     <h2>Buscar producto</h2>
     <p class="ayuda">
-      Escribe un <b>código</b> o el <b>inicio</b> del nombre (ej. "AGUA", "REFRESCO", "ACEITE").
+      Escribe un <b>código</b> o el <b>inicio</b> del nombre, o escanéalo con la cámara.
     </p>
-  <input
-  type="text"
-  id="buscador"
-  placeholder="Buscar por código o nombre..."
-  autofocus
-  autocomplete="off"
-  autocapitalize="off"
-  spellcheck="false"
-/>
+
+    <div id="qr-reader"></div>
+
+    <input
+      type="text"
+      id="buscador"
+      placeholder="Buscar por código o nombre..."
+      autofocus
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+    />
 
     <div class="info-producto" id="infoProducto">
       <strong id="descripcion"></strong>
@@ -95,198 +105,152 @@
     <button id="verCarritoBtn" onclick="irAlCarrito()" style="display:none;">Ver Carrito 🛒</button>
   </div>
 
-  <!-- Firebase (compat) -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script>
-  // ===== Firebase =====
-  const firebaseConfig = {
-    apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
-    authDomain: "inventariopv-643f1.firebaseapp.com",
-    projectId: "inventariopv-643f1",
-    storageBucket: "inventariopv-643f1.appspot.com",
-    messagingSenderId: "96242533231",
-    appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-  // ===== Estado y render =====
-  let productoSeleccionado = null;
+  <script>
+    // ===== Firebase =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
+      authDomain: "inventariopv-643f1.firebaseapp.com",
+      projectId: "inventariopv-643f1",
+      storageBucket: "inventariopv-643f1.appspot.com",
+      messagingSenderId: "96242533231",
+      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-  function mostrarProducto(p) {
-    productoSeleccionado = p;
-    document.getElementById('descripcion').textContent = p.concepto || 'Sin descripción';
-    document.getElementById('codigo').textContent = 'Código: ' + (p.codigoBarra || p.id || '');
-    document.getElementById('cantidad').value = '';
-    document.getElementById('infoProducto').style.display = 'block';
-    document.getElementById('cantidad').focus();
-  }
-  function ocultarProducto() {
-    productoSeleccionado = null;
-    document.getElementById('infoProducto').style.display = 'none';
-  }
-  function actualizarBotonCarrito() {
-    const productos = JSON.parse(localStorage.getItem('carrito_liquidos') || '[]');
-    document.getElementById('verCarritoBtn').style.display = productos.length > 0 ? 'block' : 'none';
-  }
+    // ===== Estado =====
+    let productoSeleccionado = null;
+    const buscador = document.getElementById('buscador');
 
-  // ===== Utils (una sola vez) =====
-  const pad13   = (s) => String(s).replace(/\s+/g,'').padStart(13,'0');
-  const normCod = (s) => String(s).trim().replace(/[\s\r\n]+/g, '');
-  const toUpper = (s) => String(s||'').toUpperCase();
+    // ===== QR Scanner =====
+    const qrRegion = document.getElementById("qr-reader");
+    const html5Qr = new Html5Qrcode("qr-reader");
 
-  const buscador = document.getElementById('buscador');
-
-  // ===== Anti-rebote / anti-duplicados para escáner =====
-  const SCAN_DEBOUNCE_MS = 700;
-  let lastScanCode = '';
-  let lastScanAt = 0;
-
-  // ===== Debounce para escritura manual (por nombre) =====
-  let typingTimer = null;
-  const TYPE_DEBOUNCE_MS = 300;
-
-  // Enfocar input al cargar
-  window.addEventListener('DOMContentLoaded', () => buscador.focus());
-
-  // === Enter -> procesa escaneo por CÓDIGO ===
-  buscador.addEventListener('keydown', async (e) => {
-    if (e.key !== 'Enter') return;
-
-    const raw = buscador.value.replace(/[\r\n]+/g, '');
-    const tCod = normCod(raw);
-    buscador.value = ''; // limpia inmediatamente
-
-    if (!tCod) return;
-
-    const now = Date.now();
-    if (tCod === lastScanCode && (now - lastScanAt) < SCAN_DEBOUNCE_MS) {
-      // Duplicado inmediato: ignorar
-      return;
-    }
-    lastScanCode = tCod;
-    lastScanAt = now;
-
-    // Si es numérico, intenta búsqueda por código
-    if (/^\d+$/.test(tCod)) {
-      const ok = await buscarPorCodigo(tCod);
-      if (!ok) {
-        // si no se encontró por código, intenta por nombre con lo escaneado
-        await buscarPorNombre(tCod);
-      }
-    } else {
-      // no numérico: por nombre
-      await buscarPorNombre(tCod);
-    }
-  });
-
-  // === Escritura manual -> busca por nombre con debounce ===
-  buscador.addEventListener('input', () => {
-    const val = buscador.value.trim();
-    if (typingTimer) clearTimeout(typingTimer);
-
-    if (val.length < 2) {
-      ocultarProducto();
-      return;
-    }
-    // Si parece código numérico largo, espera Enter (escáner)
-    if (/^\d{6,}$/.test(val)) return;
-
-    typingTimer = setTimeout(async () => {
-      await buscarPorNombre(val);
-    }, TYPE_DEBOUNCE_MS);
-  });
-
-  // ===== Helpers de búsqueda =====
-  async function buscarPorCodigo(code) {
-    try {
-      // a) docId
-      const byId = await db.collection('productos').doc(code).get();
-      if (byId.exists) {
-        mostrarProducto({ id: byId.id, ...byId.data() });
-        return true;
-      }
-
-      // b) campo codigoBarra exacto y con pad13
-      const v1 = code;
-      const v2 = pad13(code);
-
-      let q = await db.collection('productos')
-        .where('codigoBarra','==', v1).limit(1).get();
-
-      if (q.empty && v2 !== v1) {
-        q = await db.collection('productos')
-          .where('codigoBarra','==', v2).limit(1).get();
-      }
-
-      if (!q.empty) {
-        const doc = q.docs[0];
-        mostrarProducto({ id: doc.id, ...doc.data() });
-        return true;
-      }
-      ocultarProducto();
-      return false;
-    } catch (e) {
-      console.error('[ERROR buscarPorCodigo]', e);
-      ocultarProducto();
-      return false;
-    }
-  }
-
-  async function buscarPorNombre(texto) {
-    try {
-      const pref = toUpper(texto);
-      const q2 = await db.collection('productos')
-        .where('concepto','>=', pref)
-        .where('concepto','<=', pref + '\uf8ff')
-        .limit(20).get();
-
-      if (!q2.empty) {
-        // Muestra el primero (si quieres listado, lo cambiamos)
-        const doc = q2.docs[0];
-        mostrarProducto({ id: doc.id, ...doc.data() });
+    Html5Qrcode.getCameras().then(devices => {
+      if (devices && devices.length) {
+        const camId = devices[0].id;
+        html5Qr.start(
+          camId,
+          { fps: 10, qrbox: { width: 250, height: 150 } },
+          code => {
+            if (code) {
+              procesarCodigoEscaneado(code);
+            }
+          },
+          err => {}
+        );
       } else {
-        ocultarProducto();
+        qrRegion.innerHTML = "<p>No se encontró cámara disponible.</p>";
       }
-    } catch (e) {
-      console.error('[ERROR buscarPorNombre]', e);
-      ocultarProducto();
-    }
-  }
-
-  // ===== Agregar al carrito (usa carrito_liquidos) =====
-  document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
-  function agregarProducto() {
-    const cantidad = parseFloat(document.getElementById('cantidad').value);
-    if (!cantidad || cantidad <= 0 || !productoSeleccionado) {
-      alert('Verifica los datos');
-      return;
-    }
-    const d = productoSeleccionado;
-    const unidad = d.unidadMedidaSat || d.unidad || d.uMedida || 'N/D';
-
-    const productos = JSON.parse(localStorage.getItem('carrito_liquidos') || '[]');
-    productos.push({
-      id: d.id,
-      codigo: d.codigoBarra || d.id || '',
-      descripcion: d.concepto || 'Sin descripción',
-      unidad: unidad,
-      cantidad: cantidad
+    }).catch(err => {
+      qrRegion.innerHTML = "<p>Error accediendo a la cámara.</p>";
     });
-    localStorage.setItem('carrito_liquidos', JSON.stringify(productos));
 
-    ocultarProducto();
-    document.getElementById('buscador').value = '';
-    document.getElementById('cantidad').value = '';
+    async function procesarCodigoEscaneado(code) {
+      const limpio = code.trim();
+      if (limpio.length < 3) return;
+      await buscarPorCodigo(limpio);
+    }
+
+    // ===== Funciones visuales =====
+    function mostrarProducto(p) {
+      productoSeleccionado = p;
+      document.getElementById('descripcion').textContent = p.concepto || 'Sin descripción';
+      document.getElementById('codigo').textContent = 'Código: ' + (p.codigoBarra || p.id || '');
+      document.getElementById('cantidad').value = '';
+      document.getElementById('infoProducto').style.display = 'block';
+      document.getElementById('cantidad').focus();
+    }
+    function ocultarProducto() {
+      productoSeleccionado = null;
+      document.getElementById('infoProducto').style.display = 'none';
+    }
+    function actualizarBotonCarrito() {
+      const productos = JSON.parse(localStorage.getItem('carrito_liquidos') || '[]');
+      document.getElementById('verCarritoBtn').style.display = productos.length > 0 ? 'block' : 'none';
+    }
+
+    const pad13 = s => String(s).replace(/\s+/g,'').padStart(13,'0');
+    const normCod = s => String(s).trim().replace(/[\s\r\n]+/g, '');
+    const toUpper = s => String(s||'').toUpperCase();
+
+    // ===== Buscador manual =====
+    let typingTimer = null;
+    const TYPE_DEBOUNCE_MS = 300;
+
+    buscador.addEventListener('keydown', async e => {
+      if (e.key !== 'Enter') return;
+      const raw = buscador.value.replace(/[\r\n]+/g, '');
+      const tCod = normCod(raw);
+      buscador.value = '';
+      if (!tCod) return;
+      if (/^\d+$/.test(tCod)) await buscarPorCodigo(tCod);
+      else await buscarPorNombre(tCod);
+    });
+
+    buscador.addEventListener('input', () => {
+      const val = buscador.value.trim();
+      if (typingTimer) clearTimeout(typingTimer);
+      if (val.length < 2) { ocultarProducto(); return; }
+      if (/^\d{6,}$/.test(val)) return;
+      typingTimer = setTimeout(async () => await buscarPorNombre(val), TYPE_DEBOUNCE_MS);
+    });
+
+    // ===== Consultas Firestore =====
+    async function buscarPorCodigo(code) {
+      try {
+        const byId = await db.collection('productos').doc(code).get();
+        if (byId.exists) { mostrarProducto({ id: byId.id, ...byId.data() }); return true; }
+
+        const v1 = code, v2 = pad13(code);
+        let q = await db.collection('productos').where('codigoBarra','==',v1).limit(1).get();
+        if (q.empty && v2!==v1) q = await db.collection('productos').where('codigoBarra','==',v2).limit(1).get();
+        if (!q.empty) { mostrarProducto({ id:q.docs[0].id, ...q.docs[0].data() }); return true; }
+        ocultarProducto(); return false;
+      } catch(e){ console.error(e); ocultarProducto(); return false; }
+    }
+
+    async function buscarPorNombre(texto) {
+      try {
+        const pref = toUpper(texto);
+        const q = await db.collection('productos')
+          .where('concepto','>=',pref)
+          .where('concepto','<=',pref+'\uf8ff')
+          .limit(20).get();
+        if (!q.empty) mostrarProducto({ id:q.docs[0].id, ...q.docs[0].data() });
+        else ocultarProducto();
+      } catch(e){ console.error(e); ocultarProducto(); }
+    }
+
+    // ===== Carrito =====
+    document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
+    function agregarProducto() {
+      const cantidad = parseFloat(document.getElementById('cantidad').value);
+      if (!cantidad || cantidad <= 0 || !productoSeleccionado) return alert('Verifica los datos');
+      const d = productoSeleccionado;
+      const unidad = d.unidadMedidaSat || d.unidad || d.uMedida || 'N/D';
+      const productos = JSON.parse(localStorage.getItem('carrito_liquidos') || '[]');
+      productos.push({
+        id: d.id,
+        codigo: d.codigoBarra || d.id || '',
+        descripcion: d.concepto || 'Sin descripción',
+        unidad: unidad,
+        cantidad: cantidad
+      });
+      localStorage.setItem('carrito_liquidos', JSON.stringify(productos));
+      ocultarProducto();
+      buscador.value = '';
+      actualizarBotonCarrito();
+    }
+
+    function irAlCarrito(){ window.location.href='pantalla3.html'; }
+    window.irAlCarrito = irAlCarrito;
+
     actualizarBotonCarrito();
-  }
-
-  function irAlCarrito(){ window.location.href='pantalla3.html'; }
-  window.irAlCarrito = irAlCarrito;
-
-  // Init
-  actualizarBotonCarrito();
-</script>
+  </script>
 </body>
 </html>
