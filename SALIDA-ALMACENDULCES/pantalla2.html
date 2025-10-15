@@ -6,43 +6,22 @@
   <title>Buscar productos - Dulces</title>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to right,#00416A,#E4E5E6);
-      margin:0; padding:20px; color:white; min-height:100vh;
-    }
-    .marca-agua {
-      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-      opacity:0.07; z-index:0; max-width:90%; pointer-events:none;
-    }
-    .contenedor {
-      max-width:700px; margin:auto; background:rgba(255,255,255,0.1);
-      border-radius:10px; padding:20px; z-index:1; position:relative;
-    }
+    body{font-family:Arial,sans-serif;background:linear-gradient(to right,#00416A,#E4E5E6);
+      margin:0;padding:20px;color:white;min-height:100vh;}
+    .marca-agua{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+      opacity:0.07;z-index:0;max-width:90%;pointer-events:none;}
+    .contenedor{max-width:700px;margin:auto;background:rgba(255,255,255,0.1);
+      border-radius:10px;padding:20px;z-index:1;position:relative;}
     h2{text-align:center;margin-bottom:20px}
-    .busqueda{display:flex; gap:8px; align-items:center;}
-    .busqueda input{
-      flex:1; padding:10px; border-radius:6px; border:none;
-      font-size:16px;
-    }
-    .busqueda button{
-      background:#0c6cbd; border:none; color:#fff;
-      padding:10px 14px; border-radius:6px; cursor:pointer;
-      font-size:18px;
-    }
+    .busqueda{display:flex;gap:8px;align-items:center;}
+    .busqueda input{flex:1;padding:10px;border-radius:6px;border:none;font-size:16px;}
+    .busqueda button{background:#0c6cbd;border:none;color:#fff;padding:10px 14px;border-radius:6px;cursor:pointer;font-size:18px;}
     .busqueda button:hover{background:#084d8a}
-    #camaraContainer{display:none; margin-top:15px;}
-    #reader{width:100%; border-radius:8px; overflow:hidden;}
-    .info-producto{
-      background:#fff; color:#000; padding:15px;
-      border-radius:10px; margin-top:10px; display:none;
-    }
-    button#btnAgregar, #verCarritoBtn{
-      background:#e60000; color:white; border:none;
-      padding:12px; width:100%; border-radius:6px;
-      font-size:16px; cursor:pointer; margin-top:10px;
-    }
-    button#btnAgregar:hover, #verCarritoBtn:hover{background:#b00000}
+    #camaraContainer{display:none;margin-top:15px;}
+    #reader{width:100%;border-radius:8px;overflow:hidden;}
+    .info-producto{background:#fff;color:#000;padding:15px;border-radius:10px;margin-top:10px;display:none;}
+    button#btnAgregar,#verCarritoBtn{background:#e60000;color:white;border:none;padding:12px;width:100%;border-radius:6px;font-size:16px;cursor:pointer;margin-top:10px;}
+    button#btnAgregar:hover,#verCarritoBtn:hover{background:#b00000}
   </style>
 </head>
 <body>
@@ -74,7 +53,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script>
-    // === Firebase ===
     const firebaseConfig={
       apiKey:"AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
       authDomain:"inventariopv-643f1.firebaseapp.com",
@@ -90,22 +68,18 @@
     let productoSeleccionado=null;
     const buscador=document.getElementById('buscador');
     const camaraDiv=document.getElementById('camaraContainer');
-    const readerDiv=document.getElementById('reader');
     const btnCamara=document.getElementById('btnCamara');
     const btnCerrar=document.getElementById('btnCerrarCamara');
     let html5QrCode=null;
 
-    // === sonido beep ===
     function beep(){
       try{
         const ctx=new (window.AudioContext||window.webkitAudioContext)();
-        const osc=ctx.createOscillator();
-        const gain=ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.type="square"; osc.frequency.value=880;
+        const osc=ctx.createOscillator();const gain=ctx.createGain();
+        osc.connect(gain);gain.connect(ctx.destination);
+        osc.type="square";osc.frequency.value=880;
         gain.gain.setValueAtTime(0.1,ctx.currentTime);
-        osc.start();
-        osc.stop(ctx.currentTime+0.15);
+        osc.start();osc.stop(ctx.currentTime+0.15);
       }catch(e){console.warn("No beep",e);}
     }
 
@@ -142,7 +116,6 @@
       if(e.key==='Enter'){buscarPorCodigo(buscador.value.trim());}
     });
 
-    // === Botón cámara ===
     btnCamara.addEventListener('click',()=>{
       if(camaraDiv.style.display==='block'){cerrarCamara();return;}
       abrirCamara();
@@ -157,9 +130,10 @@
           devices[0].id,
           {fps:10,qrbox:{width:250,height:250}},
           code=>{
-            beep(); // sonido al detectar
-            buscarPorCodigo(code);
-            html5QrCode.pause();
+            beep();
+            buscador.value=code;       // muestra el código en el input
+            buscarPorCodigo(code);     // ejecuta búsqueda
+            html5QrCode.pause();       // pausa temporalmente
             setTimeout(()=>html5QrCode.resume(),1500);
           }
         );
@@ -172,7 +146,6 @@
     }
     btnCerrar.addEventListener('click',cerrarCamara);
 
-    // === Agregar al carrito ===
     document.getElementById('btnAgregar').addEventListener('click',()=>{
       const c=parseFloat(document.getElementById('cantidad').value);
       if(!c||!productoSeleccionado){alert('Verifica los datos');return;}
@@ -182,7 +155,9 @@
       localStorage.setItem('productosSeleccionados',JSON.stringify(lista));
       ocultarProducto();buscador.value='';buscador.focus();
       document.getElementById('verCarritoBtn').style.display='block';
+      beep(); // sonido al agregar también
     });
+
     function irAlCarrito(){window.location.href='pantalla3.html';}
   </script>
 </body>
