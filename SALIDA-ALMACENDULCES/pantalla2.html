@@ -153,15 +153,14 @@ function toUpper(s) {
 }
 
     document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
-    async function buscarPorNombreDulces(texto) {
+async function buscarPorNombreDulces(texto) {
   try {
     const pref = toUpper(texto);
+
+    // Trae los primeros 100 productos activos para buscar localmente
     const q = await db.collection('productos')
       .where('activo', '==', true)
-      .orderBy('concepto')
-      .startAt(pref)
-      .endAt(pref + '\uf8ff')
-      .limit(30)
+      .limit(100)
       .get();
 
     if (q.empty) {
@@ -169,25 +168,34 @@ function toUpper(s) {
       return false;
     }
 
-    // filtra solo dulces
-    const match = q.docs.find(d => {
-      const dep = (d.data().departamento || "").toUpperCase();
-      return DEPTS_DULCES.includes(dep);
+    // Normaliza y filtra manualmente
+    const coincidencias = q.docs.filter(d => {
+      const data = d.data();
+      const nombre = toUpper(data.concepto || '');
+      const dep = toUpper(data.departamento || '');
+      return (
+        DEPTS_DULCES.includes(dep) &&
+        nombre.includes(pref) // coincidencia parcial
+      );
     });
 
-    if (match) {
-      mostrarProducto({ id: match.id, ...match.data() });
+    if (coincidencias.length > 0) {
+      // Muestra el primer resultado coincidente
+      const doc = coincidencias[0];
+      mostrarProducto({ id: doc.id, ...doc.data() });
       return true;
     } else {
       ocultarProducto();
       return false;
     }
+
   } catch (e) {
     console.error('[ERROR buscarPorNombreDulces]', e);
     ocultarProducto();
     return false;
   }
 }
+
     function agregarProducto() {
       const cantidad = parseFloat(document.getElementById('cantidad').value);
       if (!cantidad || cantidad <= 0 || !productoSeleccionado) { alert('Verifica los datos'); return; }
