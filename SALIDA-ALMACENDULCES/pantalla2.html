@@ -60,11 +60,16 @@
     <h2>Buscar producto</h2>
     <p class="ayuda">Escribe un <b>código</b> o el <b>inicio</b> del nombre (ej. "PALETA", "CHICLE").</p>
 
-    <input
-      type="text" id="buscador"
-      placeholder="Buscar por código o nombre..."
-      autofocus autocomplete="off" autocapitalize="off" spellcheck="false"
-    >
+  <div style="display:flex; gap:8px; align-items:center;">
+  <input
+    type="text" id="buscador"
+    placeholder="Buscar por código o nombre..."
+    autofocus autocomplete="off" autocapitalize="off" spellcheck="false"
+    style="flex:1;"
+  />
+  <button id="btnCamara" style="padding:10px 14px; font-size:16px; border:none; border-radius:6px; background:#0c6cbd; color:white; cursor:pointer;">📷</button>
+</div>
+<div id="reader" style="width:100%;max-width:360px;margin:10px auto;display:none;"></div>
 
     <div class="info-producto" id="infoProducto">
       <strong id="descripcion"></strong>
@@ -401,5 +406,40 @@ async function buscarEquivalenteNombre(texto) {
     // Init
     actualizarBotonCarrito();
   </script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+  const btnCamara = document.getElementById('btnCamara');
+  const lectorDiv = document.getElementById('reader');
+  let html5Qr;
+
+  async function iniciarCamara() {
+    if (!html5Qr) html5Qr = new Html5Qrcode("reader");
+    lectorDiv.style.display = 'block';
+    btnCamara.disabled = true;
+
+    const config = { fps: 10, qrbox: { width: 250, height: 120 } };
+
+    try {
+      await html5Qr.start(
+        { facingMode: "environment" },
+        config,
+        async (decodedText) => {
+          await html5Qr.stop();
+          lectorDiv.style.display = 'none';
+          btnCamara.disabled = false;
+          buscador.value = decodedText.trim();
+          buscador.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+        },
+        () => {}
+      );
+    } catch (err) {
+      console.error("Error cámara:", err);
+      lectorDiv.style.display = 'none';
+      btnCamara.disabled = false;
+    }
+  }
+
+  btnCamara.addEventListener('click', iniciarCamara);
+</script>
 </body>
 </html>
