@@ -314,7 +314,11 @@ async function buscarEquivalenteNombre(texto) {
     ocultarProducto(); return false;
   } catch(e){ console.error(e); ocultarProducto(); return false; }
 }
-
+// ===== Sonido de confirmación =====
+const beep = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+function playBeep() {
+  try { beep.currentTime = 0; beep.play(); } catch(e) { console.warn("Error sonido", e); }
+}
     // ===== Escáner de cámara =====
     const qrRegion = document.getElementById("qr-reader");
     const html5Qr = new Html5Qrcode("qr-reader");
@@ -333,11 +337,13 @@ async function buscarEquivalenteNombre(texto) {
       qrRegion.innerHTML = "<p>Error accediendo a la cámara.</p>";
     });
 
-    async function procesarCodigoEscaneado(code) {
-      const limpio = code.trim();
-      if (!limpio) return;
-      await buscarPorCodigoDulces(limpio);
-    }
+async function procesarCodigoEscaneado(code) {
+  const limpio = code.trim();
+  if (!limpio) return;
+  const encontrado = await buscarPorCodigoDulces(limpio);
+  if (encontrado) playBeep(); // sonido solo si el producto fue encontrado
+}
+
 
     // ===== Carrito =====
     document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
