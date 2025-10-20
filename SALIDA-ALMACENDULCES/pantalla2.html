@@ -68,12 +68,14 @@
     <p class="ayuda">Escribe un <b>código</b>, el <b>inicio del nombre</b> o escanéalo con la cámara.</p>
 
     <div id="qr-reader"></div>
+    
 
     <input
       type="text" id="buscador"
       placeholder="Buscar por código o nombre..."
       autofocus autocomplete="off" autocapitalize="off" spellcheck="false"
     >
+<button id="activarCamara">Activar cámara</button>
 
     <div class="info-producto" id="infoProducto">
       <strong id="descripcion"></strong>
@@ -322,17 +324,18 @@ function playBeep() {
     // ===== Escáner de cámara =====
     const qrRegion = document.getElementById("qr-reader");
     const html5Qr = new Html5Qrcode("qr-reader");
-    Html5Qrcode.getCameras().then(devices => {
-      if (devices && devices.length) {
-        const camId = devices[0].id;
-        html5Qr.start(
-          camId,
-          { fps: 10, qrbox: { width: 250, height: 150 } },
-          code => { if (code) procesarCodigoEscaneado(code); }
-        );
-      } else {
-        qrRegion.innerHTML = "<p>No se encontró cámara disponible.</p>";
-      }
+Html5Qrcode.getCameras().then(devices => {
+  if (devices && devices.length) {
+    const camId = devices[0].id;
+    document.getElementById('activarCamara').onclick = () => {
+      html5Qr.start(
+        camId,
+        { fps: 10, qrbox: { width: 250, height: 150 } },
+        code => { if (code) procesarCodigoEscaneado(code); }
+      );
+    };
+  }
+});
     }).catch(() => {
       qrRegion.innerHTML = "<p>Error accediendo a la cámara.</p>";
     });
