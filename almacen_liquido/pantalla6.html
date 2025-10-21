@@ -2,14 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Resumen de salida - Líquidos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resumen de salida - Dulces</title>
   <style>
     :root{
       --ticket-width-mm: 80;
       --ticket-margin-mm: 5;
     }
-
     body{
       font-family: Arial, sans-serif;
       background: linear-gradient(to right,#00416A,#E4E5E6);
@@ -26,16 +25,13 @@
       margin: auto;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
-    .header{text-align: center;margin-bottom: 8px;}
-    .logo{
-      display:block;margin: 0 auto 6px auto;width: 220px;max-width: 90%;
-      image-rendering: -webkit-optimize-contrast;filter: grayscale(0);
-    }
-    .titulo{margin: 2px 0 8px 0;color: #00416A;font-size: 20px;font-weight: 700;text-align: center;}
+    .header{text-align:center;margin-bottom:8px;}
+    .logo{display:block;margin:0 auto 6px auto;width:220px;max-width:90%;image-rendering:-webkit-optimize-contrast;}
+    .titulo{margin:2px 0 8px 0;color:#00416A;font-size:20px;font-weight:700;text-align:center;}
     table{width:100%;border-collapse:collapse;margin-top:12px}
     th,td{border:1px solid #ccc;padding:6px 4px;text-align:center}
     th{background-color:#00416A;color:white}
-    .firmas{display:flex;justify-content:space-around;margin-top:18px;gap: 10px;flex-wrap:wrap}
+    .firmas{display:flex;justify-content:space-around;margin-top:18px;gap:10px;flex-wrap:wrap}
     .firma-box{text-align:center}
     .firma-box img{width:180px;height:auto;border:1px solid #ccc}
     .btn-imprimir{
@@ -51,7 +47,7 @@
   <div class="contenedor" id="resumenSalida">
     <div class="header">
       <img id="logoEmpresa" class="logo" src="logo_proveedora.webp" alt="Logo La Proveedora" crossOrigin="anonymous">
-      <div class="titulo">Resumen de Salida - Almacén Líquidos</div>
+      <div class="titulo">Resumen de Salida - Almacén Dulces</div>
     </div>
 
     <p><strong>Folio:</strong> <span id="folio"></span></p>
@@ -65,7 +61,6 @@
         <tr>
           <th>Código</th>
           <th>Descripción</th>
-          <th>Unidad</th>
           <th>Cantidad</th>
         </tr>
       </thead>
@@ -86,14 +81,14 @@
 
   <button class="btn-imprimir" id="btnGuardarDescargar">Guardar y descargar PDF</button>
 
-  <!-- Firebase + librerías -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
-    /* ================== CONFIGURACIÓN ================== */
+    // ================= CONFIGURACIÓN =================
     const firebaseConfig = {
       apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
       authDomain: "inventariopv-643f1.firebaseapp.com",
@@ -105,191 +100,154 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    const TOKEN = "8495270080:AAFBJ8Vxi6ZhqP6ghtJqMal9RZFz3YJBpo8";
+    const BOT_TOKEN_INV = "8495270080:AAFBJ8Vxi6ZhqP6ghtJqMal9RZFz3YJBpo8";
     const CHAT_ID = "6617988297";
 
-    /* ================== IGNORAR ESTOS CÓDIGOS ================== */
-    const CODIGOS_IGNORADOS = [
-      "060028","210004","210010","2382",
-      "250010","3062","3217","4451","7503033"
-    ];
+    // 🧠 Códigos a ignorar
+    const CODIGOS_IGNORADOS = ["060028","210004","210010","2382","250010","3062","3217","4451","7503033"];
 
-    /* ================== DATOS ================== */
-    const datos = JSON.parse(localStorage.getItem('salidaLiquidos') || '{}');
-    const productos = JSON.parse(localStorage.getItem('carrito_liquidos') || '[]');
+    // ================= DATOS =================
+    const folio   = localStorage.getItem('folio') || '';
+    const fecha   = localStorage.getItem('fecha') || new Date().toLocaleString("es-MX");
+    const entrega = localStorage.getItem('entrega') || '';
+    const recibe  = localStorage.getItem('recibe') || '';
+    const destino = localStorage.getItem('destino') || '';
+    const productos = JSON.parse(localStorage.getItem('productosSeleccionados') || '[]');
+    const firmaEntrega = localStorage.getItem('firmaEntrega') || '';
+    const firmaRecibe  = localStorage.getItem('firmaRecibe')  || '';
 
-    function leerFirma(keys){
-      for(const k of keys){ const v = localStorage.getItem(k);
-        if(v?.startsWith('data:image')) return v;
-      } return '';
-    }
-    const firmaEntrega = leerFirma(['firma_entrega_liquidos','firmaEntregaLiquidos','firmaEntrega']);
-    const firmaRecibe  = leerFirma(['firma_recibe_liquidos','firmaRecibeLiquidos','firmaRecibe']);
-
-    document.getElementById('folio').textContent = datos.folio || '';
-    document.getElementById('fecha').textContent = datos.fecha || new Date().toLocaleString('es-MX');
-    document.getElementById('entrega').textContent = datos.entrega || '';
-    document.getElementById('recibe').textContent = datos.recibe || '';
-    document.getElementById('destino').textContent = datos.destino || '';
+    document.getElementById('folio').textContent = folio;
+    document.getElementById('fecha').textContent = fecha;
+    document.getElementById('entrega').textContent = entrega;
+    document.getElementById('recibe').textContent = recibe;
+    document.getElementById('destino').textContent = destino;
     document.getElementById('firmaEntrega').src = firmaEntrega;
-    document.getElementById('firmaRecibe').src  = firmaRecibe;
+    document.getElementById('firmaRecibe').src = firmaRecibe;
 
-    const tbody = document.getElementById('tabla-productos');
+    const tabla = document.getElementById('tabla-productos');
     productos.forEach(p=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML=`
-        <td>${p.codigo??''}</td>
-        <td>${p.descripcion??''}</td>
-        <td>${p.unidad??''}</td>
-        <td>${p.cantidad??0}</td>`;
-      tbody.appendChild(tr);
+      const row=document.createElement('tr');
+      row.innerHTML=`<td>${p.codigo||''}</td><td>${p.descripcion||''}</td><td>${p.cantidad||0}</td>`;
+      tabla.appendChild(row);
     });
 
-    /* ================== TELEGRAM ================== */
-    async function enviarSalidaTelegram(salida){
+    // 🚨 Notificación con el bot Star
+    async function notificarStarDulce(salida){
       try{
-        let msg = `🧃 *Almacén Líquidos – Nueva salida registrada*\n\n`;
-        msg += `📄 Folio: ${salida.folio || 'Sin folio'}\n`;
-        msg += `📅 Fecha: ${salida.fecha || new Date().toLocaleString('es-MX')}\n`;
-        msg += `👤 Entrega: ${salida.entrega || 'N/A'}\n`;
-        msg += `🤝 Recibe: ${salida.recibe || 'N/A'}\n`;
-        msg += `📍 Destino: ${salida.destino || 'N/A'}\n\n`;
-        if(Array.isArray(salida.productos) && salida.productos.length){
-          msg += `📦 Artículos:\n`;
-          salida.productos.forEach(p=>{
-            msg += `• ${p.cantidad} x ${p.descripcion||p.nombre} (Código: ${p.codigo})\n`;
-          });
-        }else msg += `⚠️ Sin artículos registrados.\n`;
-        await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`,{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({chat_id:CHAT_ID,text:msg,parse_mode:"Markdown"})
+        const token="8083018476:AAFXEdpxhVA6wjz2fQEOktxPFxq8zmc6X20";
+        const chatId="6617988297";
+        let msg=`🍬 Nueva salida registrada en *Almacén Dulces*\n\n📄 Folio: ${salida.folio}\n📅 Fecha: ${salida.fecha}\n👤 Entrega: ${salida.entrega}\n🤝 Recibe: ${salida.recibe}\n📍 Destino: ${salida.destino}\n\n`;
+        if(Array.isArray(salida.productos)&&salida.productos.length>0){
+          msg+=`📦 Productos:\n`;
+          salida.productos.forEach(p=>{msg+=`• ${p.cantidad} x ${p.descripcion}\n`;});
+        }else msg+=`⚠️ No hay productos registrados.\n`;
+
+        const frasesStar=[
+          "🏹✨ Star apunta siempre al orden, cada salida nos acerca a la victoria.",
+          "📚 La disciplina es el arco que dispara el progreso. – Star",
+          "🏹 Cada registro es una flecha que fortalece al sistema. – Star",
+          "📖 La bibliotecaria nunca olvida, cada salida queda guardada en la historia.",
+          "🌟 Sigue adelante, el orden es poder. – Star",
+          "💻 Cada línea de código en PROVSOFT es un ladrillo en la fortaleza del futuro. – Star",
+          "🚀 PROVSOFT crece con cada salida, y tú creces con él. – Star",
+          "🔥 No solo registramos productos, construimos legado con PROVSOFT. – Star",
+          "🏰 PROVSOFT es la muralla, y cada registro la hace más fuerte. – Star"
+        ];
+        msg+=`\n\n${frasesStar[Math.floor(Math.random()*frasesStar.length)]}`;
+
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{
+          method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({chat_id:chatId,text:msg,parse_mode:"Markdown"})
         });
-      }catch(e){ console.warn("No se pudo enviar la notificación general:",e); }
+      }catch(e){console.warn("No se pudo notificar:",e);}
+    }
+
+    // 🧮 Revisión inventario y alertas
+    async function verificarInventarioYNotificar(productos){
+      for(const art of productos){
+        if(CODIGOS_IGNORADOS.includes(art.codigo)){
+          console.log(`⚙️ Código ${art.codigo} (${art.descripcion}) ignorado.`);
+          continue;
+        }
+        try{
+          const snap=await db.collection('seguimiento_inventario')
+            .where('codigoBarra','==',art.codigo)
+            .where('activo','==',true).get();
+          if(!snap.empty){
+            snap.forEach(async doc=>{
+              const data=doc.data();
+              const ref=db.collection('seguimiento_inventario').doc(doc.id);
+              const invActual=parseInt(data.inventario_fijado||0);
+              const minimo=parseInt(data.inventario_minimo||0);
+              const nuevo=Math.max(0,invActual-parseInt(art.cantidad||0));
+              await ref.update({
+                inventario_fijado:nuevo,
+                ultima_salida:new Date().toISOString(),
+                actualizadoEn:new Date().toISOString()
+              });
+              await enviarAlertaInventario(data,nuevo,minimo);
+            });
+          }
+        }catch(e){console.error("❌ Error inventario:",e);}
+      }
     }
 
     async function enviarAlertaInventario(item,nuevo,minimo){
-      const esCritico = nuevo <= minimo;
-      let msg = `🧃 *Almacén Líquidos – Control de Stock*\n\n`;
+      const esCritico=nuevo<=minimo;
+      let msg=`🍬 *Almacén Dulces – Control de Stock*\n\n`;
       if(esCritico){
-        msg += `
-🔥🔥🔥 *ALERTA MÁXIMA DE INVENTARIO* 🔥🔥🔥
-💀 *¡STOCK CRÍTICO DETECTADO!* 💀
-📦 ${item.concepto||item.descripcion||item.nombre}
-🆔 Código: ${item.codigoBarra||item.codigo}
-📉 Existencia actual: ${nuevo}
-🔢 Mínimo definido: ${minimo}
-🏠 Almacén: Líquidos
-📅 ${new Date().toLocaleString("es-MX")}
-⚠️ *¡REPOSICIÓN URGENTE NECESARIA!* ⚠️
-🚒🔥💣🚨💥🧯🔥💥🚨💣🔥🚒`;
+        msg+=`🚨 *ALERTA CRÍTICA DE INVENTARIO*\n📦 ${item.concepto||item.descripcion}\n🆔 Código: ${item.codigoBarra}\n📉 Existencia actual: ${nuevo}\n🔢 Mínimo definido: ${minimo}\n🏠 Almacén: Dulces\n📅 ${new Date().toLocaleString("es-MX")}\n⚠️ *REPOSICIÓN URGENTE NECESARIA* 🚨`;
       }else{
-        msg += `
-✅ *Inventario actualizado correctamente*
-📦 ${item.concepto||item.descripcion||item.nombre}
-🆔 Código: ${item.codigoBarra||item.codigo}
-📉 Existencia actual: ${nuevo}
-🔢 Mínimo definido: ${minimo}
-🏠 Almacén: Líquidos
-📅 ${new Date().toLocaleString("es-MX")}`;
+        msg+=`✅ Inventario actualizado\n📦 ${item.concepto||item.descripcion}\n🆔 Código: ${item.codigoBarra}\n📉 Actual: ${nuevo}\n🔢 Mínimo: ${minimo}\n🏠 Dulces\n📅 ${new Date().toLocaleString("es-MX")}`;
       }
-      await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`,{
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN_INV}/sendMessage`,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({chat_id:CHAT_ID,text:msg,parse_mode:"Markdown"})
       });
     }
 
-    /* ================== INVENTARIO ================== */
-    async function verificarInventarioYNotificar(productos){
-      for(const art of productos){
-        if (CODIGOS_IGNORADOS.includes(art.codigo)) {
-          console.log(`⚙️ Código ${art.codigo} (${art.descripcion}) ignorado.`);
-          continue;
-        }
-        try{
-          const snap = await db.collection('seguimiento_inventario')
-            .where('codigoBarra','==',art.codigo)
-            .where('activo','==',true)
-            .get();
-          if(!snap.empty){
-            snap.forEach(async doc=>{
-              const data = doc.data();
-              const ref = db.collection('seguimiento_inventario').doc(doc.id);
-              const invActual = parseInt(data.inventario_fijado||0);
-              const minimo = parseInt(data.inventario_minimo||0);
-              const nuevo = Math.max(0, invActual - parseInt(art.cantidad||0));
-              await ref.update({
-                inventario_fijado: nuevo,
-                ultima_salida: new Date().toISOString(),
-                actualizadoEn: new Date().toISOString()
-              });
-              await enviarAlertaInventario(data, nuevo, minimo);
-            });
-          }else{
-            console.log(`ℹ️ Código ${art.codigo} no está en seguimiento_inventario.`);
-          }
-        }catch(err){ console.error("❌ Error en inventario:", err); }
-      }
-    }
-
-    /* ================== GUARDAR SALIDA ================== */
+    // 🔐 Guardar en Firestore
     async function guardarSalida(){
-      const data = {
-        ...datos,
-        productos,
-        firmaEntrega,
-        firmaRecibe,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      await db.collection('almacenes').doc('Almacen_Liquidos')
-        .collection('salidas').add(data);
-      const folioDoc = db.collection('consecutivos').doc('salidas_liquidos');
-      const snap = await folioDoc.get();
-      if(snap.exists){
-        await folioDoc.update({ultimo:(snap.data().ultimo||1)+1});
-      }else{
-        await folioDoc.set({ultimo:2});
-      }
-      await enviarSalidaTelegram(data);
+      const data={folio,fecha,entrega,recibe,destino,productos,firmaEntrega,firmaRecibe,timestamp:firebase.firestore.FieldValue.serverTimestamp()};
+      await db.collection("almacenes").doc("Almacen_Dulces").collection("salidas").add(data);
+      const folioDoc=db.collection("consecutivos").doc("salidas_dulces");
+      const snap=await folioDoc.get();
+      if(snap.exists){await folioDoc.update({ultimo:(snap.data().ultimo||1)+1});}
+      else{await folioDoc.set({ultimo:2});}
+      await notificarStarDulce(data);
       await verificarInventarioYNotificar(productos);
     }
 
-    /* ================== PDF ================== */
-    function preload(imgEl){ return new Promise(res=>{
-      if(!imgEl)return res(); if(imgEl.complete)return res();
-      imgEl.onload=()=>res(); imgEl.onerror=()=>res();
-    });}
+    // 🧾 PDF
+    function preload(imgEl){return new Promise(res=>{if(!imgEl)return res();if(imgEl.complete)return res();imgEl.onload=()=>res();imgEl.onerror=()=>res();});}
     async function descargarPDF(){
-      const { jsPDF } = window.jspdf;
-      const resumen = document.getElementById('resumenSalida');
-      await Promise.all([
-        preload(document.getElementById('logoEmpresa')),
-        preload(document.getElementById('firmaEntrega')),
-        preload(document.getElementById('firmaRecibe'))
-      ]);
-      const canvas = await html2canvas(resumen,{scale:2,useCORS:true,backgroundColor:'#fff'});
-      const imgData = canvas.toDataURL('image/png');
-      const ticketWidthMM = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ticket-width-mm'))||80;
-      const marginMM = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ticket-margin-mm'))||5;
-      const imgPxWidth=canvas.width,imgPxHeight=canvas.height;
+      const {jsPDF}=window.jspdf;
+      const resumen=document.getElementById('resumenSalida');
+      await Promise.all([preload(document.getElementById('logoEmpresa')),preload(document.getElementById('firmaEntrega')),preload(document.getElementById('firmaRecibe'))]);
+      const canvas=await html2canvas(resumen,{scale:2,useCORS:true,backgroundColor:'#fff'});
+      const imgData=canvas.toDataURL('image/png');
+      const ticketWidthMM=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ticket-width-mm'))||80;
+      const marginMM=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ticket-margin-mm'))||5;
       const usableWidthMM=ticketWidthMM-(marginMM*2);
-      const pxPerMM=imgPxWidth/usableWidthMM;
-      const heightMM=imgPxHeight/pxPerMM+(marginMM*2);
+      const pxPerMM=canvas.width/usableWidthMM;
+      const heightMM=canvas.height/pxPerMM+(marginMM*2);
       const pdf=new jsPDF('p','mm',[ticketWidthMM,heightMM]);
-      pdf.addImage(imgData,'PNG',marginMM,marginMM,usableWidthMM,imgPxHeight/pxPerMM);
-      pdf.save(`Comprobante_${(datos.folio||'SAL-LIQ').replace(/\s+/g,'_')}.pdf`);
+      pdf.addImage(imgData,'PNG',marginMM,marginMM,usableWidthMM,canvas.height/pxPerMM);
+      pdf.save(`Comprobante_${(folio||'SAL-DUL').replace(/\s+/g,'_')}.pdf`);
     }
 
-    /* ================== EVENTO PRINCIPAL ================== */
-    document.getElementById('btnGuardarDescargar').addEventListener('click', async ()=>{
+    // 🧩 Flujo principal
+    async function guardarYDescargar(){
       if(!productos||productos.length===0){alert("No hay productos.");return;}
       try{
         await guardarSalida();
         await descargarPDF();
-        setTimeout(()=>{localStorage.removeItem('carrito_liquidos');location.href='index.html';},1500);
+        setTimeout(()=>{localStorage.clear();window.location.href="index.html";},2000);
       }catch(e){alert("Error: "+e.message);}
-    });
+    }
+
+    document.getElementById('btnGuardarDescargar').addEventListener('click',guardarYDescargar);
   </script>
 </body>
 </html>
