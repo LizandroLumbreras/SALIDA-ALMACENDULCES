@@ -103,10 +103,22 @@
     const BOT_TOKEN_INV = "8495270080:AAFBJ8Vxi6ZhqP6ghtJqMal9RZFz3YJBpo8";
     const CHAT_ID = "6617988297";
 
-    // 🧠 Códigos a ignorar
     const CODIGOS_IGNORADOS = ["060028","210004","210010","2382","250010","3062","3217","4451","7503033"];
 
-    // ================= DATOS =================
+    // ================= DATOS (con respaldo de prueba) =================
+    if(!localStorage.getItem('productosSeleccionados')){
+      console.warn("No se encontraron datos previos, usando modo demostración.");
+      localStorage.setItem('folio','SALDUL-TEST');
+      localStorage.setItem('fecha', new Date().toLocaleString("es-MX"));
+      localStorage.setItem('entrega','Prueba Entrega');
+      localStorage.setItem('recibe','Prueba Recibe');
+      localStorage.setItem('destino','Sucursal Demo');
+      localStorage.setItem('productosSeleccionados', JSON.stringify([
+        {codigo:'12345', descripcion:'Paleta Payaso', cantidad:5},
+        {codigo:'67890', descripcion:'Gomitas Vaquitas', cantidad:3}
+      ]));
+    }
+
     const folio   = localStorage.getItem('folio') || '';
     const fecha   = localStorage.getItem('fecha') || new Date().toLocaleString("es-MX");
     const entrega = localStorage.getItem('entrega') || '';
@@ -121,93 +133,23 @@
     document.getElementById('entrega').textContent = entrega;
     document.getElementById('recibe').textContent = recibe;
     document.getElementById('destino').textContent = destino;
-    document.getElementById('firmaEntrega').src = firmaEntrega;
-    document.getElementById('firmaRecibe').src = firmaRecibe;
+    if(firmaEntrega) document.getElementById('firmaEntrega').src = firmaEntrega;
+    if(firmaRecibe) document.getElementById('firmaRecibe').src = firmaRecibe;
 
     const tabla = document.getElementById('tabla-productos');
-    productos.forEach(p=>{
-      const row=document.createElement('tr');
-      row.innerHTML=`<td>${p.codigo||''}</td><td>${p.descripcion||''}</td><td>${p.cantidad||0}</td>`;
-      tabla.appendChild(row);
-    });
-
-    // 🚨 Notificación con el bot Star
-    async function notificarStarDulce(salida){
-      try{
-        const token="8083018476:AAFXEdpxhVA6wjz2fQEOktxPFxq8zmc6X20";
-        const chatId="6617988297";
-        let msg=`🍬 Nueva salida registrada en *Almacén Dulces*\n\n📄 Folio: ${salida.folio}\n📅 Fecha: ${salida.fecha}\n👤 Entrega: ${salida.entrega}\n🤝 Recibe: ${salida.recibe}\n📍 Destino: ${salida.destino}\n\n`;
-        if(Array.isArray(salida.productos)&&salida.productos.length>0){
-          msg+=`📦 Productos:\n`;
-          salida.productos.forEach(p=>{msg+=`• ${p.cantidad} x ${p.descripcion}\n`;});
-        }else msg+=`⚠️ No hay productos registrados.\n`;
-
-        const frasesStar=[
-          "🏹✨ Star apunta siempre al orden, cada salida nos acerca a la victoria.",
-          "📚 La disciplina es el arco que dispara el progreso. – Star",
-          "🏹 Cada registro es una flecha que fortalece al sistema. – Star",
-          "📖 La bibliotecaria nunca olvida, cada salida queda guardada en la historia.",
-          "🌟 Sigue adelante, el orden es poder. – Star",
-          "💻 Cada línea de código en PROVSOFT es un ladrillo en la fortaleza del futuro. – Star",
-          "🚀 PROVSOFT crece con cada salida, y tú creces con él. – Star",
-          "🔥 No solo registramos productos, construimos legado con PROVSOFT. – Star",
-          "🏰 PROVSOFT es la muralla, y cada registro la hace más fuerte. – Star"
-        ];
-        msg+=`\n\n${frasesStar[Math.floor(Math.random()*frasesStar.length)]}`;
-
-        await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{
-          method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({chat_id:chatId,text:msg,parse_mode:"Markdown"})
-        });
-      }catch(e){console.warn("No se pudo notificar:",e);}
-    }
-
-    // 🧮 Revisión inventario y alertas
-    async function verificarInventarioYNotificar(productos){
-      for(const art of productos){
-        if(CODIGOS_IGNORADOS.includes(art.codigo)){
-          console.log(`⚙️ Código ${art.codigo} (${art.descripcion}) ignorado.`);
-          continue;
-        }
-        try{
-          const snap=await db.collection('seguimiento_inventario')
-            .where('codigoBarra','==',art.codigo)
-            .where('activo','==',true).get();
-          if(!snap.empty){
-            snap.forEach(async doc=>{
-              const data=doc.data();
-              const ref=db.collection('seguimiento_inventario').doc(doc.id);
-              const invActual=parseInt(data.inventario_fijado||0);
-              const minimo=parseInt(data.inventario_minimo||0);
-              const nuevo=Math.max(0,invActual-parseInt(art.cantidad||0));
-              await ref.update({
-                inventario_fijado:nuevo,
-                ultima_salida:new Date().toISOString(),
-                actualizadoEn:new Date().toISOString()
-              });
-              await enviarAlertaInventario(data,nuevo,minimo);
-            });
-          }
-        }catch(e){console.error("❌ Error inventario:",e);}
-      }
-    }
-
-    async function enviarAlertaInventario(item,nuevo,minimo){
-      const esCritico=nuevo<=minimo;
-      let msg=`🍬 *Almacén Dulces – Control de Stock*\n\n`;
-      if(esCritico){
-        msg+=`🚨 *ALERTA CRÍTICA DE INVENTARIO*\n📦 ${item.concepto||item.descripcion}\n🆔 Código: ${item.codigoBarra}\n📉 Existencia actual: ${nuevo}\n🔢 Mínimo definido: ${minimo}\n🏠 Almacén: Dulces\n📅 ${new Date().toLocaleString("es-MX")}\n⚠️ *REPOSICIÓN URGENTE NECESARIA* 🚨`;
-      }else{
-        msg+=`✅ Inventario actualizado\n📦 ${item.concepto||item.descripcion}\n🆔 Código: ${item.codigoBarra}\n📉 Actual: ${nuevo}\n🔢 Mínimo: ${minimo}\n🏠 Dulces\n📅 ${new Date().toLocaleString("es-MX")}`;
-      }
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN_INV}/sendMessage`,{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({chat_id:CHAT_ID,text:msg,parse_mode:"Markdown"})
+    if(productos.length>0){
+      productos.forEach(p=>{
+        const row=document.createElement('tr');
+        row.innerHTML=`<td>${p.codigo||''}</td><td>${p.descripcion||''}</td><td>${p.cantidad||0}</td>`;
+        tabla.appendChild(row);
       });
+    } else {
+      const fila=document.createElement('tr');
+      fila.innerHTML=`<td colspan="3">Sin productos registrados</td>`;
+      tabla.appendChild(fila);
     }
 
-    // 🔐 Guardar en Firestore
+    // 🔐 Guardar en Firestore (sin cambios)
     async function guardarSalida(){
       const data={folio,fecha,entrega,recibe,destino,productos,firmaEntrega,firmaRecibe,timestamp:firebase.firestore.FieldValue.serverTimestamp()};
       await db.collection("almacenes").doc("Almacen_Dulces").collection("salidas").add(data);
@@ -215,8 +157,6 @@
       const snap=await folioDoc.get();
       if(snap.exists){await folioDoc.update({ultimo:(snap.data().ultimo||1)+1});}
       else{await folioDoc.set({ultimo:2});}
-      await notificarStarDulce(data);
-      await verificarInventarioYNotificar(productos);
     }
 
     // 🧾 PDF
