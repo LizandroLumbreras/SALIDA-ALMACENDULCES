@@ -41,10 +41,25 @@
     }
     .btn-imprimir:hover{background-color:#094a85}
     @media print {.btn-imprimir{display:none;}}
+    .alerta {
+      text-align: center;
+      background: #fff3cd;
+      color: #664d03;
+      border: 1px solid #ffeeba;
+      border-radius: 8px;
+      padding: 10px;
+      margin: 12px auto;
+      max-width: 700px;
+      font-size: 15px;
+    }
   </style>
 </head>
 <body>
-  <div class="contenedor" id="resumenSalida">
+  <div id="alerta" class="alerta" style="display:none">
+    ⚠️ Faltan datos en la salida. Regresa al módulo anterior y vuelve a generar el resumen.
+  </div>
+
+  <div class="contenedor" id="resumenSalida" style="display:none">
     <div class="header">
       <img id="logoEmpresa" class="logo" src="logo_proveedora.webp" alt="Logo La Proveedora" crossOrigin="anonymous">
       <div class="titulo">Resumen de Salida - Almacén Dulces</div>
@@ -79,7 +94,7 @@
     </div>
   </div>
 
-  <button class="btn-imprimir" id="btnGuardarDescargar">Guardar y descargar PDF</button>
+  <button class="btn-imprimir" id="btnGuardarDescargar" style="display:none">Guardar y descargar PDF</button>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -105,53 +120,51 @@
 
     const CODIGOS_IGNORADOS = ["060028","210004","210010","2382","250010","3062","3217","4451","7503033"];
 
-    // ================= DATOS (con respaldo de prueba) =================
-    if(!localStorage.getItem('productosSeleccionados')){
-      console.warn("No se encontraron datos previos, usando modo demostración.");
-      localStorage.setItem('folio','SALDUL-TEST');
-      localStorage.setItem('fecha', new Date().toLocaleString("es-MX"));
-      localStorage.setItem('entrega','Prueba Entrega');
-      localStorage.setItem('recibe','Prueba Recibe');
-      localStorage.setItem('destino','Sucursal Demo');
-      localStorage.setItem('productosSeleccionados', JSON.stringify([
-        {codigo:'12345', descripcion:'Paleta Payaso', cantidad:5},
-        {codigo:'67890', descripcion:'Gomitas Vaquitas', cantidad:3}
-      ]));
-    }
+    // ================= DATOS =================
+    const folio   = localStorage.getItem('folio');
+    const fecha   = localStorage.getItem('fecha');
+    const entrega = localStorage.getItem('entrega');
+    const recibe  = localStorage.getItem('recibe');
+    const destino = localStorage.getItem('destino');
+    const productosStr = localStorage.getItem('productosSeleccionados');
+    const firmaEntrega = localStorage.getItem('firmaEntrega');
+    const firmaRecibe  = localStorage.getItem('firmaRecibe');
 
-    const folio   = localStorage.getItem('folio') || '';
-    const fecha   = localStorage.getItem('fecha') || new Date().toLocaleString("es-MX");
-    const entrega = localStorage.getItem('entrega') || '';
-    const recibe  = localStorage.getItem('recibe') || '';
-    const destino = localStorage.getItem('destino') || '';
-    const productos = JSON.parse(localStorage.getItem('productosSeleccionados') || '[]');
-    const firmaEntrega = localStorage.getItem('firmaEntrega') || '';
-    const firmaRecibe  = localStorage.getItem('firmaRecibe')  || '';
+    const alerta = document.getElementById("alerta");
+    const contenedor = document.getElementById("resumenSalida");
+    const boton = document.getElementById("btnGuardarDescargar");
 
-    document.getElementById('folio').textContent = folio;
-    document.getElementById('fecha').textContent = fecha;
-    document.getElementById('entrega').textContent = entrega;
-    document.getElementById('recibe').textContent = recibe;
-    document.getElementById('destino').textContent = destino;
-    if(firmaEntrega) document.getElementById('firmaEntrega').src = firmaEntrega;
-    if(firmaRecibe) document.getElementById('firmaRecibe').src = firmaRecibe;
+    // Validar datos
+    if(!folio || !productosStr){
+      alerta.style.display = "block";
+      console.warn("⚠️ Datos faltantes en localStorage. No se mostrará el resumen.");
+    } else {
+      contenedor.style.display = "block";
+      boton.style.display = "block";
 
-    const tabla = document.getElementById('tabla-productos');
-    if(productos.length>0){
+      const productos = JSON.parse(productosStr || '[]');
+      document.getElementById('folio').textContent = folio;
+      document.getElementById('fecha').textContent = fecha || new Date().toLocaleString("es-MX");
+      document.getElementById('entrega').textContent = entrega || '';
+      document.getElementById('recibe').textContent = recibe || '';
+      document.getElementById('destino').textContent = destino || '';
+      if(firmaEntrega) document.getElementById('firmaEntrega').src = firmaEntrega;
+      if(firmaRecibe) document.getElementById('firmaRecibe').src = firmaRecibe;
+
+      const tabla = document.getElementById('tabla-productos');
       productos.forEach(p=>{
         const row=document.createElement('tr');
         row.innerHTML=`<td>${p.codigo||''}</td><td>${p.descripcion||''}</td><td>${p.cantidad||0}</td>`;
         tabla.appendChild(row);
       });
-    } else {
-      const fila=document.createElement('tr');
-      fila.innerHTML=`<td colspan="3">Sin productos registrados</td>`;
-      tabla.appendChild(fila);
     }
 
-    // 🔐 Guardar en Firestore (sin cambios)
+    // 🔐 Guardar en Firestore
     async function guardarSalida(){
-      const data={folio,fecha,entrega,recibe,destino,productos,firmaEntrega,firmaRecibe,timestamp:firebase.firestore.FieldValue.serverTimestamp()};
+      const data={folio,fecha,entrega,recibe,destino,
+        productos:JSON.parse(productosStr||'[]'),
+        firmaEntrega,firmaRecibe,
+        timestamp:firebase.firestore.FieldValue.serverTimestamp()};
       await db.collection("almacenes").doc("Almacen_Dulces").collection("salidas").add(data);
       const folioDoc=db.collection("consecutivos").doc("salidas_dulces");
       const snap=await folioDoc.get();
@@ -179,7 +192,7 @@
 
     // 🧩 Flujo principal
     async function guardarYDescargar(){
-      if(!productos||productos.length===0){alert("No hay productos.");return;}
+      if(!productosStr){alert("No hay productos válidos.");return;}
       try{
         await guardarSalida();
         await descargarPDF();
@@ -187,7 +200,7 @@
       }catch(e){alert("Error: "+e.message);}
     }
 
-    document.getElementById('btnGuardarDescargar').addEventListener('click',guardarYDescargar);
+    boton.addEventListener('click',guardarYDescargar);
   </script>
 </body>
 </html>
