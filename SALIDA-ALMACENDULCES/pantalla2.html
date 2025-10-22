@@ -68,6 +68,7 @@
     <p class="ayuda">Escribe un <b>código</b>, el <b>inicio del nombre</b> o escanéalo con la cámara.</p>
 
     <div id="qr-reader"></div>
+    <button id="activarCamara">Activar cámara 📷</button>
 
     <input
       type="text" id="buscador"
@@ -319,23 +320,40 @@ const beep = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.o
 function playBeep() {
   try { beep.currentTime = 0; beep.play(); } catch(e) { console.warn("Error sonido", e); }
 }
-    // ===== Escáner de cámara =====
-    const qrRegion = document.getElementById("qr-reader");
-    const html5Qr = new Html5Qrcode("qr-reader");
-    Html5Qrcode.getCameras().then(devices => {
-      if (devices && devices.length) {
-        const camId = devices[0].id;
-        html5Qr.start(
-          camId,
-          { fps: 10, qrbox: { width: 250, height: 150 } },
-          code => { if (code) procesarCodigoEscaneado(code); }
-        );
-      } else {
-        qrRegion.innerHTML = "<p>No se encontró cámara disponible.</p>";
-      }
-    }).catch(() => {
-      qrRegion.innerHTML = "<p>Error accediendo a la cámara.</p>";
+// ===== Escáner manual =====
+const qrRegion = document.getElementById("qr-reader");
+const activarBtn = document.getElementById("activarCamara");
+let html5Qr = null;
+let camActiva = false;
+
+activarBtn.addEventListener("click", async () => {
+  if (camActiva) {
+    html5Qr.stop().then(() => {
+      camActiva = false;
+      activarBtn.textContent = "Activar cámara 📷";
     });
+    return;
+  }
+  try {
+    html5Qr = new Html5Qrcode("qr-reader");
+    const devices = await Html5Qrcode.getCameras();
+    if (!devices || !devices.length) {
+      qrRegion.innerHTML = "<p>No se encontró cámara disponible.</p>";
+      return;
+    }
+    const camId = devices[0].id;
+    await html5Qr.start(
+      camId,
+      { fps: 10, qrbox: { width: 250, height: 150 } },
+      code => { if (code) procesarCodigoEscaneado(code); }
+    );
+    camActiva = true;
+    activarBtn.textContent = "Detener cámara ⏹️";
+  } catch (err) {
+    qrRegion.innerHTML = "<p>Error accediendo a la cámara.</p>";
+    console.error(err);
+  }
+});
 
 async function procesarCodigoEscaneado(code) {
   const limpio = code.trim();
