@@ -164,6 +164,14 @@
 
       // Guardar agrupado
       localStorage.setItem("salidaLiquidos", JSON.stringify({folio,fecha,entrega,recibe,destino}));
+ 
+      // 🔹 AGREGA ESTO ↓↓↓
+  localStorage.setItem("folio", folio);
+  localStorage.setItem("fecha", fecha);
+  localStorage.setItem("entrega", entrega);
+  localStorage.setItem("recibe", recibe);
+  localStorage.setItem("destino", destino);
+  // 🔹 HASTA AQUÍ ↑↑↑
 
       // Ir a la pantalla 2
       window.location.href = "pantalla2.html";
