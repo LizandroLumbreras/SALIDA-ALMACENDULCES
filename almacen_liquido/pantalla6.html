@@ -158,6 +158,75 @@ const firmaRecibe  = localStorage.getItem('firma_recibe_liquidos');
         tabla.appendChild(row);
       });
     }
+// 🚨 Notificación general con bot STAR
+async function notificarStarLiquido(salida){
+  try{
+    const token="8083018476:AAFXEdpxhVA6wjz2fQEOktxPFxq8zmc6X20"; // Bot STAR
+    const chatId="6617988297";
+    let msg=`💧 *Nueva salida registrada – Almacén Líquidos*\n\n`;
+    msg+=`📄 Folio: ${salida.folio}\n📅 Fecha: ${salida.fecha}\n👤 Entrega: ${salida.entrega}\n🤝 Recibe: ${salida.recibe}\n📍 Destino: ${salida.destino}\n\n`;
+    if(Array.isArray(salida.productos)&&salida.productos.length>0){
+      msg+=`📦 Productos:\n`;
+      salida.productos.forEach(p=>{msg+=`• ${p.cantidad} x ${p.descripcion||p.nombre}\n`;});
+    } else msg+=`⚠️ No hay productos registrados.\n`;
+
+    const frasesStar=[
+      "💧 Cada salida fortalece el flujo del sistema. – Star",
+      "🏹 Precisión y orden líquido. – Star",
+      "🚀 PROVSOFT fluye con cada registro. – Star"
+    ];
+    msg+=`\n\n${frasesStar[Math.floor(Math.random()*frasesStar.length)]}`;
+
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({chat_id:chatId,text:msg,parse_mode:"Markdown"})
+    });
+  }catch(e){console.warn("⚠️ No se pudo notificar a Telegram:",e);}
+}
+async function enviarAlertaInventario(item,nuevo,minimo){
+  const esCritico=nuevo<=minimo;
+  let msg=`💧 *Almacén Líquidos – Control de Stock*\n\n`;
+  if(esCritico){
+    msg+=`🚨 *ALERTA CRÍTICA DE INVENTARIO*\n📦 ${item.concepto||item.descripcion}\n🆔 Código: ${item.codigoBarra}\n📉 Existencia actual: ${nuevo}\n🔢 Mínimo definido: ${minimo}\n🏠 Almacén: Líquidos\n📅 ${new Date().toLocaleString("es-MX")}\n⚠️ *REPOSICIÓN URGENTE NECESARIA* 🚨`;
+  }else{
+    msg+=`✅ Inventario actualizado\n📦 ${item.concepto||item.descripcion}\n🆔 Código: ${item.codigoBarra}\n📉 Actual: ${nuevo}\n🔢 Mínimo: ${minimo}\n🏠 Líquidos\n📅 ${new Date().toLocaleString("es-MX")}`;
+  }
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN_INV}/sendMessage`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({chat_id:CHAT_ID,text:msg,parse_mode:"Markdown"})
+  });
+}
+// 🧮 Verificación y actualización de inventario
+async function verificarInventarioYNotificar(productos){
+  for(const art of productos){
+    if(CODIGOS_IGNORADOS.includes(art.codigo)){
+      console.log(`⚙️ Código ${art.codigo} (${art.descripcion}) ignorado.`);
+      continue;
+    }
+    try{
+      const snap=await db.collection('seguimiento_inventario')
+        .where('codigoBarra','==',art.codigo)
+        .where('activo','==',true).get();
+      if(!snap.empty){
+        snap.forEach(async doc=>{
+          const data=doc.data();
+          const ref=db.collection('seguimiento_inventario').doc(doc.id);
+          const invActual=parseInt(data.inventario_fijado||0);
+          const minimo=parseInt(data.inventario_minimo||0);
+          const nuevo=Math.max(0,invActual-parseInt(art.cantidad||0));
+          await ref.update({
+            inventario_fijado:nuevo,
+            ultima_salida:new Date().toISOString(),
+            actualizadoEn:new Date().toISOString()
+          });
+          await enviarAlertaInventario(data,nuevo,minimo);
+        });
+      }
+    }catch(e){console.error("❌ Error inventario:",e);}
+  }
+}
 
 // 🔐 Guardar en Firestore con incremento real del folio (LÍQUIDOS)
 async function guardarSalida() {
@@ -191,6 +260,9 @@ async function guardarSalida() {
           .doc("Almacen_Liquidos")
           .collection("salidas")
           .add(data);
+  await notificarStarLiquido(data);
+await verificarInventarioYNotificar(data.productos);
+
 
   document.getElementById("folio").textContent = nuevoFolio;
   localStorage.setItem("folio", nuevoFolio);
