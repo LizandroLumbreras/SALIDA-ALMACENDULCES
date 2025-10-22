@@ -238,6 +238,7 @@ async function guardarSalida() {
   if (snap.exists) {
     numero = (snap.data().ultimo || 0) + 1;
     await folioDoc.update({ ultimo: numero });
+    await new Promise(r => setTimeout(r, 500)); // 🔹 medio segundo de espera
   } else {
     await folioDoc.set({ ultimo: 1 });
   }
@@ -290,14 +291,18 @@ await verificarInventarioYNotificar(data.productos);
     }
 
     // 🧩 Flujo principal
-    async function guardarYDescargar(){
-      if(!productosStr){alert("No hay productos válidos.");return;}
-      try{
-        await guardarSalida();
-        await descargarPDF();
-        setTimeout(()=>{localStorage.clear();window.location.href="index.html";},2000);
-      }catch(e){alert("Error: "+e.message);}
-    }
+async function guardarYDescargar(){
+  if(!productosStr){alert("No hay productos válidos.");return;}
+  try{
+    await guardarSalida();       // 🔹 incrementa folio
+    await descargarPDF();        // 🔹 genera PDF después de guardar
+    localStorage.clear();        // 🔹 limpia datos
+    // Espera 1 segundo adicional para asegurar commit de Firestore
+    setTimeout(()=> window.location.href="index.html", 1000);
+  }catch(e){
+    alert("Error: "+e.message);
+  }
+}
 
     boton.addEventListener('click',guardarYDescargar);
   </script>
