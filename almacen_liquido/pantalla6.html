@@ -159,18 +159,45 @@ const firmaRecibe  = localStorage.getItem('firma_recibe_liquidos');
       });
     }
 
-    // 🔐 Guardar en Firestore
-    async function guardarSalida(){
-      const data={folio,fecha,entrega,recibe,destino,
-        productos:JSON.parse(productosStr||'[]'),
-        firmaEntrega,firmaRecibe,
-        timestamp:firebase.firestore.FieldValue.serverTimestamp()};
-      await db.collection("almacenes").doc("Almacen_Dulces").collection("salidas").add(data);
-      const folioDoc=db.collection("consecutivos").doc("salidas_dulces");
-      const snap=await folioDoc.get();
-      if(snap.exists){await folioDoc.update({ultimo:(snap.data().ultimo||1)+1});}
-      else{await folioDoc.set({ultimo:2});}
-    }
+// 🔐 Guardar en Firestore con incremento real del folio (LÍQUIDOS)
+async function guardarSalida() {
+  const folioDoc = db.collection("consecutivos").doc("salidas_liquidos");
+  let nuevoFolio = "";
+  let numero = 1;
+
+  const snap = await folioDoc.get();
+  if (snap.exists) {
+    numero = (snap.data().ultimo || 0) + 1;
+    await folioDoc.update({ ultimo: numero });
+  } else {
+    await folioDoc.set({ ultimo: 1 });
+  }
+
+  nuevoFolio = `SAL-LIQ-${String(numero).padStart(4, "0")}`;
+
+  const data = {
+    folio: nuevoFolio,
+    fecha: fecha || new Date().toLocaleString("es-MX"),
+    entrega,
+    recibe,
+    destino,
+    productos: JSON.parse(productosStr || "[]"),
+    firmaEntrega,
+    firmaRecibe,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  await db.collection("almacenes")
+          .doc("Almacen_Liquidos")
+          .collection("salidas")
+          .add(data);
+
+  document.getElementById("folio").textContent = nuevoFolio;
+  localStorage.setItem("folio", nuevoFolio);
+
+  return nuevoFolio;
+}
+
 
     // 🧾 PDF
     function preload(imgEl){return new Promise(res=>{if(!imgEl)return res();if(imgEl.complete)return res();imgEl.onload=()=>res();imgEl.onerror=()=>res();});}
