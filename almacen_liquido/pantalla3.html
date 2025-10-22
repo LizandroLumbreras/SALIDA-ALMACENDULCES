@@ -101,6 +101,11 @@
   </div>
 
   <script>
+    const salida = JSON.parse(localStorage.getItem('salidaLiquidos') || '{}');
+if (!salida.folio) {
+  alert('⚠️ No se ha definido una salida activa.');
+  window.location.href = 'index.html';
+}
     // Lee del carrito de LÍQUIDOS
     let productos = JSON.parse(localStorage.getItem("carrito_liquidos") || "[]");
     const contenedor = document.getElementById("listaCarrito");
@@ -144,16 +149,19 @@
       }
       productos[index].cantidad = cantidad;
       localStorage.setItem("carrito_liquidos", JSON.stringify(productos));
+       localStorage.setItem("productosSeleccionados", JSON.stringify(productos)); // ← agrega 
     }
 
     function eliminar(index) {
       productos.splice(index, 1);
       localStorage.setItem("carrito_liquidos", JSON.stringify(productos));
+      localStorage.setItem("productosSeleccionados", JSON.stringify(productos)); // ← agrega esto
       mostrarCarrito();
     }
 
     function irAlResumen() {
       localStorage.setItem("carrito_liquidos", JSON.stringify(productos));
+       localStorage.setItem("productosSeleccionados", JSON.stringify(productos)); // ← agrega esto
       window.location.href = "pantalla4.html"; // firmas / resumen
     }
 
