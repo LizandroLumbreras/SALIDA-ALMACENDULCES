@@ -262,24 +262,33 @@
 
   // ===== Carrito =====
   document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
-  function agregarProducto() {
-    const cantidad = parseFloat(document.getElementById('cantidad').value);
-    if (!cantidad || cantidad <= 0 || !productoSeleccionado) return alert('Verifica los datos');
-    const d = productoSeleccionado;
-    const unidad = d.unidadMedidaSat || d.unidad || d.uMedida || 'N/D';
-    const productos = JSON.parse(localStorage.getItem('carrito_liquidos') || '[]');
-    productos.push({
-      id: d.id,
-      codigo: d.codigoBarra || d.id || '',
-      descripcion: d.concepto || 'Sin descripción',
-      unidad: unidad,
-      cantidad: cantidad
-    });
-    localStorage.setItem('carrito_liquidos', JSON.stringify(productos));
-    ocultarProducto();
-    buscador.value = '';
-    actualizarBotonCarrito();
-  }
+
+  // Al inicio del <script>, después de declarar db:
+const salida = JSON.parse(localStorage.getItem('salidaLiquidos') || '{}');
+if (!salida.folio) {
+  alert('⚠️ No se ha definido una salida activa.');
+  window.location.href = 'index.html';
+}
+
+function agregarProducto() {
+  const cantidad = parseFloat(document.getElementById('cantidad').value);
+  if (!cantidad || cantidad <= 0 || !productoSeleccionado) return alert('Verifica los datos');
+  const d = productoSeleccionado;
+  const unidad = d.unidadMedidaSat || d.unidad || d.uMedida || 'N/D';
+  const productos = JSON.parse(localStorage.getItem('carrito_liquidos') || '[]');
+  productos.push({
+    id: d.id,
+    codigo: d.codigoBarra || d.id || '',
+    descripcion: d.concepto || 'Sin descripción',
+    unidad: unidad,
+    cantidad: cantidad
+  });
+  localStorage.setItem('carrito_liquidos', JSON.stringify(productos));
+  localStorage.setItem('productosSeleccionados', JSON.stringify(productos)); // ← agrega esto
+  ocultarProducto();
+  buscador.value = '';
+  actualizarBotonCarrito();
+}
 
   function irAlCarrito(){ window.location.href='pantalla3.html'; }
   window.irAlCarrito = irAlCarrito;
