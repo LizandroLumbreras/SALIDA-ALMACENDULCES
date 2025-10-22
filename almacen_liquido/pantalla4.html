@@ -66,6 +66,11 @@
   </div>
 
   <script>
+    const salida = JSON.parse(localStorage.getItem('salidaLiquidos') || '{}');
+if (!salida.folio) {
+  alert('⚠️ No se ha definido una salida activa.');
+  window.location.href = 'index.html';
+}
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     let dibujando = false;
