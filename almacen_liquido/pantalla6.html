@@ -198,33 +198,79 @@ async function enviarAlertaInventario(item,nuevo,minimo){
     body:JSON.stringify({chat_id:CHAT_ID,text:msg,parse_mode:"Markdown"})
   });
 }
-// 🧮 Verificación y actualización de inventario
+// 🧮 Verificación y actualización de inventario con historial y alertas
 async function verificarInventarioYNotificar(productos){
   for(const art of productos){
     if(CODIGOS_IGNORADOS.includes(art.codigo)){
       console.log(`⚙️ Código ${art.codigo} (${art.descripcion}) ignorado.`);
       continue;
     }
-    try{
-      const snap=await db.collection('seguimiento_inventario')
+
+    try {
+      const snap = await db.collection('seguimiento_inventario')
         .where('codigoBarra','==',art.codigo)
         .where('activo','==',true).get();
+
       if(!snap.empty){
-        snap.forEach(async doc=>{
-          const data=doc.data();
-          const ref=db.collection('seguimiento_inventario').doc(doc.id);
-          const invActual=parseInt(data.inventario_fijado||0);
-          const minimo=parseInt(data.inventario_minimo||0);
-          const nuevo=Math.max(0,invActual-parseInt(art.cantidad||0));
+        for(const docu of snap.docs){
+          const data = docu.data();
+          const ref = db.collection('seguimiento_inventario').doc(docu.id);
+
+          const invActual = parseFloat(data.inventario_fijado || 0);
+          const minimo = parseFloat(data.inventario_minimo || 0);
+          const salida = parseFloat(art.cantidad || 0);
+          const nuevo = Math.max(0, invActual - salida);
+
+          console.log(`📦 ${art.codigo} → Actual: ${invActual} | Salida: ${salida} | Nuevo: ${nuevo}`);
+
+          // 1️⃣ Actualizar Firestore
           await ref.update({
-            inventario_fijado:nuevo,
-            ultima_salida:new Date().toISOString(),
-            actualizadoEn:new Date().toISOString()
+            inventario_fijado: nuevo,
+            ultima_salida: new Date().toISOString(),
+            actualizadoEn: new Date().toISOString()
           });
-          await enviarAlertaInventario(data,nuevo,minimo);
-        });
+
+          // 2️⃣ Registrar historial
+          await ref.collection("historial").add({
+            tipo: "salida",
+            cantidad: salida,
+            folio: folio,
+            fecha: new Date().toISOString(),
+            usuario: entrega || "sistema",
+            descripcion: `Salida registrada desde módulo Almacén Dulces`
+          });
+
+          // 3️⃣ Enviar alerta a Telegram según nivel
+          const esCritico = nuevo <= minimo;
+          let msg = `💧 *Almacén Dulces – Control de Stock*\n\n`;
+
+          if(esCritico){
+            msg += `🚨 *ALERTA CRÍTICA DE INVENTARIO*\n`;
+            msg += `📦 ${data.concepto || art.descripcion}\n🆔 Código: ${data.codigoBarra}\n`;
+            msg += `📉 Existencia actual: ${nuevo}\n🔢 Mínimo definido: ${minimo}\n`;
+            msg += `🏠 Almacén: Dulces\n📅 ${new Date().toLocaleString("es-MX")}\n`;
+            msg += `⚠️ *REPOSICIÓN URGENTE NECESARIA* 🚨`;
+          } else {
+            msg += `✅ Inventario actualizado correctamente\n`;
+            msg += `📦 ${data.concepto || art.descripcion}\n🆔 Código: ${data.codigoBarra}\n`;
+            msg += `📤 Salida reciente: ${salida}\n📉 Existencia actual: ${nuevo}\n`;
+            msg += `🔢 Mínimo definido: ${minimo}\n🏠 Almacén: Dulces\n📅 ${new Date().toLocaleString("es-MX")}`;
+          }
+
+          await fetch(`https://api.telegram.org/bot${BOT_TOKEN_INV}/sendMessage`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({chat_id: CHAT_ID, text: msg, parse_mode: "Markdown"})
+          });
+
+          console.log(`✅ Inventario y alerta enviados: ${art.codigo}`);
+        }
+      } else {
+        console.log(`ℹ️ Código ${art.codigo} no encontrado en seguimiento_inventario`);
       }
-    }catch(e){console.error("❌ Error inventario:",e);}
+    } catch (e) {
+      console.error("❌ Error en verificación de inventario:", e);
+    }
   }
 }
 
