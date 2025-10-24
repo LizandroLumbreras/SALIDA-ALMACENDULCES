@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Resumen de salida - Dulces</title>
-  <style>
+  <style>async function enviarAlertaInventario(item,nuevo,minimo){
+
     :root{
       --ticket-width-mm: 80;
       --ticket-margin-mm: 5;
@@ -243,21 +244,6 @@ async function verificarInventarioYNotificar(productos){
     }
   }
 }
-
-    async function enviarAlertaInventario(item,nuevo,minimo){
-      const esCritico=nuevo<=minimo;
-      let msg=`🍬 *Almacén Dulces – Control de Stock*\n\n`;
-      if(esCritico){
-        msg+=`🚨 *ALERTA CRÍTICA DE INVENTARIO*\n📦 ${item.concepto||item.descripcion}\n🆔 Código: ${item.codigoBarra}\n📉 Existencia actual: ${nuevo}\n🔢 Mínimo definido: ${minimo}\n🏠 Almacén: Dulces\n📅 ${new Date().toLocaleString("es-MX")}\n⚠️ *REPOSICIÓN URGENTE NECESARIA* 🚨`;
-      }else{
-        msg+=`✅ Inventario actualizado\n📦 ${item.concepto||item.descripcion}\n🆔 Código: ${item.codigoBarra}\n📉 Actual: ${nuevo}\n🔢 Mínimo: ${minimo}\n🏠 Dulces\n📅 ${new Date().toLocaleString("es-MX")}`;
-      }
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN_INV}/sendMessage`,{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({chat_id:CHAT_ID,text:msg,parse_mode:"Markdown"})
-      });
-    }
 
     // 🔐 Guardar en Firestore
     async function guardarSalida(){
