@@ -240,25 +240,37 @@ async function buscarCoincidencias(texto) {
     resultadosDiv.innerHTML = '<div style="padding:8px;color:#555;">Buscando...</div>';
     resultadosDiv.style.display = 'block';
 
-    // 🔍 Paso 1: descargar primeros 50 productos activos ordenados por concepto
-    const q = await db.collection('productos')
-      .where('activo', '==', true)
-      .orderBy('concepto')
-      .limit(500)
-      .get();
+    // 🔍 Traer todos los productos activos (en lotes)
+    let resultados = [];
+    let lastDoc = null;
+    const PAGE_SIZE = 500;
 
-    const resultados = [];
-    q.forEach(doc => {
-      const d = doc.data();
-      const concepto = toUpper(d.concepto || '');
-      const cod = toUpper(d.codigoBarra || '');
-      if (
-        !EXCLUIDOS.includes(parseInt(d?.departamento_id)) &&
-        (concepto.includes(pref) || cod.includes(pref))
-      ) {
-        resultados.push({ id: doc.id, ...d });
-      }
-    });
+    do {
+      let q = db.collection('productos')
+        .where('activo', '==', true)
+        .orderBy('concepto')
+        .limit(PAGE_SIZE);
+
+      if (lastDoc) q = q.startAfter(lastDoc);
+      const snapshot = await q.get();
+
+      if (snapshot.empty) break;
+      snapshot.forEach(doc => {
+        const d = doc.data();
+        const concepto = toUpper(d.concepto || '');
+        const cod = toUpper(d.codigoBarra || '');
+        if (
+          !EXCLUIDOS.includes(parseInt(d?.departamento_id)) &&
+          (concepto.includes(pref) || cod.includes(pref))
+        ) {
+          resultados.push({ id: doc.id, ...d });
+        }
+      });
+      lastDoc = snapshot.docs[snapshot.docs.length - 1];
+
+      // 🔧 Seguridad: detener si ya hay suficientes resultados
+      if (resultados.length >= 20) break;
+    } while (true);
 
     // 🧾 Mostrar resultados
     resultadosDiv.innerHTML = '';
@@ -268,8 +280,14 @@ async function buscarCoincidencias(texto) {
     }
 
     resultados.forEach(d => {
+      const concepto = d.concepto || 'Sin descripción';
+      const cod = d.codigoBarra || d.id;
+      // resaltado de coincidencia
+      const regex = new RegExp(`(${pref})`, 'gi');
+      const conceptoResaltado = concepto.replace(regex, '<mark style="background:yellow;">$1</mark>');
+
       const item = document.createElement('div');
-      item.innerHTML = `<b>${d.concepto || 'Sin descripción'}</b><br><small>${d.codigoBarra || d.id}</small>`;
+      item.innerHTML = `<b>${conceptoResaltado}</b><br><small>${cod}</small>`;
       item.style.padding = '8px';
       item.style.borderBottom = '1px solid #ccc';
       item.style.cursor = 'pointer';
@@ -286,9 +304,6 @@ async function buscarCoincidencias(texto) {
     resultadosDiv.style.display = 'none';
   }
 }
-
-
-
 
   // ===== Consultas Firestore =====
   async function buscarPorCodigo(code) {
