@@ -142,6 +142,20 @@
     const SCAN_DEBOUNCE_MS = 800;
     const TYPE_DEBOUNCE_MS = 300;
     const buscador = document.getElementById('buscador');
+// 🔹 Contenedor visual de resultados
+const resultadosDiv = document.createElement('div');
+resultadosDiv.id = 'resultados';
+resultadosDiv.style.background = 'white';
+resultadosDiv.style.color = 'black';
+resultadosDiv.style.borderRadius = '8px';
+resultadosDiv.style.maxHeight = '200px';
+resultadosDiv.style.overflowY = 'auto';
+resultadosDiv.style.display = 'none';
+resultadosDiv.style.position = 'absolute';
+resultadosDiv.style.width = '90%';
+resultadosDiv.style.zIndex = '999';
+resultadosDiv.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+document.querySelector('.contenedor').appendChild(resultadosDiv);
 
     if (!window.__scannerHandlersBound) {
       window.__scannerHandlersBound = true;
@@ -189,24 +203,64 @@
       });
 
       buscador.addEventListener('input', () => {
-        if (typingTimer) clearTimeout(typingTimer);
-        const val = (buscador.value || '').trim();
-        if (val.length < 2) { ocultarProducto(); return; }
-        if (/^\d{6,}$/.test(val)) return;
-        typingTimer = setTimeout(async () => {
-          try {
-            let ok = await buscarPorNombreDulces(val);
-            if (!ok) await buscarEquivalenteNombre(val);
-          } catch (err) { console.error('[typing debounce]', err); ocultarProducto(); }
-        }, TYPE_DEBOUNCE_MS);
-      });
-      buscador.addEventListener('change', () => {
+  if (typingTimer) clearTimeout(typingTimer);
+  const val = (buscador.value || '').trim();
+  if (val.length < 2) { ocultarProducto(); return; }
+  typingTimer = setTimeout(() => buscarCoincidenciasDulces(val), 300);
+});
+     buscador.addEventListener('change', () => {
         buscador.value = (buscador.value || '').replace(/[\r\n\t]+/g, '');
       });
     }
 
 // Departamentos válidos de dulces
 const DULCES_IDS = [29, 32, 3, 51, 44];
+async function buscarCoincidenciasDulces(texto) {
+  try {
+    const pref = texto.trim().toLowerCase();
+    if (pref.length < 2) { resultadosDiv.style.display = 'none'; return; }
+
+    resultadosDiv.innerHTML = '<div style="padding:8px;color:#555;">Buscando...</div>';
+    resultadosDiv.style.display = 'block';
+
+    const productosRef = db.collection('productos');
+    const snap = await productosRef.where('activo', '==', true).get();
+
+    resultadosDiv.innerHTML = '';
+    let encontrados = 0;
+
+    snap.forEach(docSnap => {
+      const d = docSnap.data();
+      const concepto = String(d.concepto || '').toLowerCase();
+      const codigo = String(d.codigoBarra || '').toLowerCase();
+      if (concepto.includes(pref) || codigo.includes(pref)) {
+        encontrados++;
+        const regex = new RegExp(`(${pref})`, 'gi');
+        const resaltado = (d.concepto || '').replace(regex, '<mark style="background:yellow;">$1</mark>');
+
+        const div = document.createElement('div');
+        div.innerHTML = `<b>${resaltado}</b><br><small>${d.codigoBarra || ''}</small>`;
+        div.style.padding = '8px';
+        div.style.borderBottom = '1px solid #ccc';
+        div.style.cursor = 'pointer';
+        div.onclick = () => {
+          mostrarProducto(d);
+          resultadosDiv.style.display = 'none';
+        };
+        resultadosDiv.appendChild(div);
+      }
+    });
+
+    if (encontrados === 0) {
+      resultadosDiv.innerHTML = '<div style="padding:8px;">Sin resultados</div>';
+    }
+
+  } catch (err) {
+    console.error('Error en buscarCoincidenciasDulces:', err);
+    resultadosDiv.style.display = 'none';
+  }
+}
+
 
 // -------- BUSQUEDA POR CODIGO --------
 async function buscarPorCodigoDulces(code) {
