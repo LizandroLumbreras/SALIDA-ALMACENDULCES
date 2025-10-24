@@ -102,117 +102,75 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <script>
-    // ================= CONFIGURACIÓN =================
-    const firebaseConfig = {
-      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
-      authDomain: "inventariopv-643f1.firebaseapp.com",
-      projectId: "inventariopv-643f1",
-      storageBucket: "inventariopv-643f1.appspot.com",
-      messagingSenderId: "96242533231",
-      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+<script>
+/* ================== CONFIGURACIÓN GENERAL ================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
+  authDomain: "inventariopv-643f1.firebaseapp.com",
+  projectId: "inventariopv-643f1",
+  storageBucket: "inventariopv-643f1.appspot.com",
+  messagingSenderId: "96242533231",
+  appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-    const BOT_TOKEN_INV = "8495270080:AAFBJ8Vxi6ZhqP6ghtJqMal9RZFz3YJBpo8";
-    const CHAT_ID = "6617988297";
+/* === BOTS === */
+const BOT_STAR  = "8083018476:AAFXEdpxhVA6wjz2fQEOktxPFxq8zmc6X20"; // ⭐ Notifica salidas
+const CHAT_STAR = "6617988297";
 
-    const CODIGOS_IGNORADOS = ["060028","210004","210010","2382","250010","3062","3217","4451","7503033"];
+const BOT_ALIKA  = "8241239653:AAH3-eS7XrRlO4G6LO5MydlYlOm2Um18SGE"; // 🧠 Control inventarios
+const CHAT_ALIKA = "6617988297";
 
-    // ================= DATOS =================
-    const folio   = localStorage.getItem('folio');
-    const fecha   = localStorage.getItem('fecha');
-    const entrega = localStorage.getItem('entrega');
-    const recibe  = localStorage.getItem('recibe');
-    const destino = localStorage.getItem('destino');
-    const productosStr = localStorage.getItem('productosSeleccionados');
-    const firmaEntrega = localStorage.getItem('firma_entrega_liquidos');
-const firmaRecibe  = localStorage.getItem('firma_recibe_liquidos');
+const CODIGOS_IGNORADOS = ["060028","210004","210010","2382","250010","3062","3217","4451","7503033"];
 
-    const alerta = document.getElementById("alerta");
-    const contenedor = document.getElementById("resumenSalida");
-    const boton = document.getElementById("btnGuardarDescargar");
+/* ================== NOTIFICACIÓN STAR ================== */
+async function notificarStarSalida(salida) {
+  try {
+    let msg = `🌟 *Nueva salida registrada – Almacén Dulces*\n\n`;
+    msg += `📄 Folio: ${salida.folio}\n📅 Fecha: ${salida.fecha}\n👤 Entrega: ${salida.entrega}\n🤝 Recibe: ${salida.recibe}\n📍 Destino: ${salida.destino}\n\n`;
 
-    // Validar datos
-    if(!folio || !productosStr){
-      alerta.style.display = "block";
-      console.warn("⚠️ Datos faltantes en localStorage. No se mostrará el resumen.");
-    } else {
-      contenedor.style.display = "block";
-      boton.style.display = "block";
-
-      const productos = JSON.parse(productosStr || '[]');
-      document.getElementById('folio').textContent = folio;
-      document.getElementById('fecha').textContent = fecha || new Date().toLocaleString("es-MX");
-      document.getElementById('entrega').textContent = entrega || '';
-      document.getElementById('recibe').textContent = recibe || '';
-      document.getElementById('destino').textContent = destino || '';
-      if(firmaEntrega) document.getElementById('firmaEntrega').src = firmaEntrega;
-      if(firmaRecibe) document.getElementById('firmaRecibe').src = firmaRecibe;
-
-      const tabla = document.getElementById('tabla-productos');
-      productos.forEach(p=>{
-        const row=document.createElement('tr');
-        row.innerHTML=`<td>${p.codigo||''}</td><td>${p.descripcion||''}</td><td>${p.cantidad||0}</td>`;
-        tabla.appendChild(row);
+    if (Array.isArray(salida.productos) && salida.productos.length > 0) {
+      msg += `📦 Productos:\n`;
+      salida.productos.forEach(p => {
+        msg += `• ${p.cantidad} x ${p.descripcion || p.nombre}\n`;
       });
-    }
-// 🚨 Notificación general con bot STAR
-async function notificarStarLiquido(salida){
-  try{
-    const token="8083018476:AAFXEdpxhVA6wjz2fQEOktxPFxq8zmc6X20"; // Bot STAR
-    const chatId="6617988297";
-    let msg=`💧 *Nueva salida registrada – Almacén Líquidos*\n\n`;
-    msg+=`📄 Folio: ${salida.folio}\n📅 Fecha: ${salida.fecha}\n👤 Entrega: ${salida.entrega}\n🤝 Recibe: ${salida.recibe}\n📍 Destino: ${salida.destino}\n\n`;
-    if(Array.isArray(salida.productos)&&salida.productos.length>0){
-      msg+=`📦 Productos:\n`;
-      salida.productos.forEach(p=>{msg+=`• ${p.cantidad} x ${p.descripcion||p.nombre}\n`;});
-    } else msg+=`⚠️ No hay productos registrados.\n`;
+    } else msg += `⚠️ No hay productos registrados.\n`;
 
-    const frasesStar=[
-      "💧 Cada salida fortalece el flujo del sistema. – Star",
-      "🏹 Precisión y orden líquido. – Star",
-      "🚀 PROVSOFT fluye con cada registro. – Star"
+    const frasesStar = [
+      "🚀 PROVSOFT fluyendo sin fricción. – Star",
+      "💧 Flujo constante, sistema estable. – Star",
+      "🏹 Precisión y control: la esencia del almacén. – Star"
     ];
-    msg+=`\n\n${frasesStar[Math.floor(Math.random()*frasesStar.length)]}`;
+    msg += `\n${frasesStar[Math.floor(Math.random() * frasesStar.length)]}`;
 
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({chat_id:chatId,text:msg,parse_mode:"Markdown"})
+    await fetch(`https://api.telegram.org/bot${BOT_STAR}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: CHAT_STAR, text: msg, parse_mode: "Markdown" })
     });
-  }catch(e){console.warn("⚠️ No se pudo notificar a Telegram:",e);}
-}
-async function enviarAlertaInventario(item,nuevo,minimo){
-  const esCritico=nuevo<=minimo;
-  let msg=`💧 *Almacén Líquidos – Control de Stock*\n\n`;
-  if(esCritico){
-    msg+=`🚨 *ALERTA CRÍTICA DE INVENTARIO*\n📦 ${item.concepto||item.descripcion}\n🆔 Código: ${item.codigoBarra}\n📉 Existencia actual: ${nuevo}\n🔢 Mínimo definido: ${minimo}\n🏠 Almacén: Líquidos\n📅 ${new Date().toLocaleString("es-MX")}\n⚠️ *REPOSICIÓN URGENTE NECESARIA* 🚨`;
-  }else{
-    msg+=`✅ Inventario actualizado\n📦 ${item.concepto||item.descripcion}\n🆔 Código: ${item.codigoBarra}\n📉 Actual: ${nuevo}\n🔢 Mínimo: ${minimo}\n🏠 Líquidos\n📅 ${new Date().toLocaleString("es-MX")}`;
+    console.log("✅ STAR: salida notificada.");
+  } catch (err) {
+    console.error("⚠️ STAR error:", err);
   }
-  await fetch(`https://api.telegram.org/bot${BOT_TOKEN_INV}/sendMessage`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({chat_id:CHAT_ID,text:msg,parse_mode:"Markdown"})
-  });
 }
-// 🧮 Verificación y actualización de inventario con historial y alertas
-async function verificarInventarioYNotificar(productos){
-  for(const art of productos){
-    if(CODIGOS_IGNORADOS.includes(art.codigo)){
-      console.log(`⚙️ Código ${art.codigo} (${art.descripcion}) ignorado.`);
+
+/* ================== CONTROL ALIKA ================== */
+async function verificarInventarioYNotificar(productos) {
+  for (const art of productos) {
+    if (CODIGOS_IGNORADOS.includes(art.codigo)) {
+      console.log(`⏩ Código ${art.codigo} (${art.descripcion}) ignorado.`);
       continue;
     }
 
     try {
       const snap = await db.collection('seguimiento_inventario')
-        .where('codigoBarra','==',art.codigo)
-        .where('activo','==',true).get();
+        .where('codigoBarra', '==', art.codigo)
+        .where('activo', '==', true)
+        .get();
 
-      if(!snap.empty){
-        for(const docu of snap.docs){
+      if (!snap.empty) {
+        for (const docu of snap.docs) {
           const data = docu.data();
           const ref = db.collection('seguimiento_inventario').doc(docu.id);
 
@@ -221,62 +179,58 @@ async function verificarInventarioYNotificar(productos){
           const salida = parseFloat(art.cantidad || 0);
           const nuevo = Math.max(0, invActual - salida);
 
-          console.log(`📦 ${art.codigo} → Actual: ${invActual} | Salida: ${salida} | Nuevo: ${nuevo}`);
-
-          // 1️⃣ Actualizar Firestore
           await ref.update({
             inventario_fijado: nuevo,
             ultima_salida: new Date().toISOString(),
             actualizadoEn: new Date().toISOString()
           });
 
-          // 2️⃣ Registrar historial
           await ref.collection("historial").add({
             tipo: "salida",
             cantidad: salida,
-            folio: folio,
+            folio: localStorage.getItem("folio") || "",
             fecha: new Date().toISOString(),
-            usuario: entrega || "sistema",
+            usuario: localStorage.getItem("entrega") || "sistema",
             descripcion: `Salida registrada desde módulo Almacén Dulces`
           });
 
-          // 3️⃣ Enviar alerta a Telegram según nivel
-          const esCritico = nuevo <= minimo;
-          let msg = `💧 *Almacén Dulces – Control de Stock*\n\n`;
+          // 📦 Mensaje de actualización normal
+          let msg = `📦 *Actualización de inventario – Almacén Dulces*\n`;
+          msg += `🆔 Código: ${data.codigoBarra}\n📦 ${data.concepto || art.descripcion}\n`;
+          msg += `📉 Existencia actual: ${nuevo}\n🔢 Mínimo definido: ${minimo}\n📅 ${new Date().toLocaleString("es-MX")}\n`;
 
-          if(esCritico){
-            msg += `🚨 *ALERTA CRÍTICA DE INVENTARIO*\n`;
-            msg += `📦 ${data.concepto || art.descripcion}\n🆔 Código: ${data.codigoBarra}\n`;
-            msg += `📉 Existencia actual: ${nuevo}\n🔢 Mínimo definido: ${minimo}\n`;
-            msg += `🏠 Almacén: Dulces\n📅 ${new Date().toLocaleString("es-MX")}\n`;
-            msg += `⚠️ *REPOSICIÓN URGENTE NECESARIA* 🚨`;
-          } else {
-            msg += `✅ Inventario actualizado correctamente\n`;
-            msg += `📦 ${data.concepto || art.descripcion}\n🆔 Código: ${data.codigoBarra}\n`;
-            msg += `📤 Salida reciente: ${salida}\n📉 Existencia actual: ${nuevo}\n`;
-            msg += `🔢 Mínimo definido: ${minimo}\n🏠 Almacén: Dulces\n📅 ${new Date().toLocaleString("es-MX")}`;
-          }
-
-          await fetch(`https://api.telegram.org/bot${BOT_TOKEN_INV}/sendMessage`, {
+          await fetch(`https://api.telegram.org/bot${BOT_ALIKA}/sendMessage`, {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({chat_id: CHAT_ID, text: msg, parse_mode: "Markdown"})
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: CHAT_ALIKA, text: msg, parse_mode: "Markdown" })
           });
 
-          console.log(`✅ Inventario y alerta enviados: ${art.codigo}`);
+          // 🚨 Alerta crítica
+          if (nuevo <= minimo) {
+            let alerta = `🚨 *ALERTA CRÍTICA DE INVENTARIO*\n`;
+            alerta += `📦 ${data.concepto || art.descripcion}\n🆔 Código: ${data.codigoBarra}\n`;
+            alerta += `📉 Existencia: ${nuevo}\n🔢 Mínimo: ${minimo}\n🏠 Almacén Dulces\n`;
+            alerta += `⚠️ *REPOSICIÓN URGENTE NECESARIA* 🚨`;
+            await fetch(`https://api.telegram.org/bot${BOT_ALIKA}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chat_id: CHAT_ALIKA, text: alerta, parse_mode: "Markdown" })
+            });
+            console.log(`🚨 ALIKA: alerta crítica enviada (${art.codigo})`);
+          }
         }
-      } else {
-        console.log(`ℹ️ Código ${art.codigo} no encontrado en seguimiento_inventario`);
       }
     } catch (e) {
-      console.error("❌ Error en verificación de inventario:", e);
+      console.error("❌ Error en verificación inventario:", e);
     }
   }
 }
 
-// 🔐 Guardar en Firestore con incremento real del folio (LÍQUIDOS)
-async function guardarSalida() {
-  const folioDoc = db.collection("consecutivos").doc("salidas_liquidos");
+/* ================== GUARDAR SALIDA ================== */
+document.querySelector('#btnGuardarDescargar').disabled = true;
+
+  async function guardarSalida() {
+  const folioDoc = db.collection("consecutivos").doc("salidas_dulces");
   let nuevoFolio = "";
   let numero = 1;
 
@@ -284,37 +238,38 @@ async function guardarSalida() {
   if (snap.exists) {
     numero = (snap.data().ultimo || 0) + 1;
     await folioDoc.update({ ultimo: numero });
-    await new Promise(r => setTimeout(r, 500)); // 🔹 medio segundo de espera
   } else {
     await folioDoc.set({ ultimo: 1 });
   }
 
-  nuevoFolio = `SAL-LIQ-${String(numero).padStart(4, "0")}`;
+  nuevoFolio = `SAL-DUL-${String(numero).padStart(4, "0")}`;
 
   const data = {
     folio: nuevoFolio,
-    fecha: fecha || new Date().toLocaleString("es-MX"),
-    entrega,
-    recibe,
-    destino,
-    productos: JSON.parse(productosStr || "[]"),
-    firmaEntrega,
-    firmaRecibe,
+    fecha: new Date().toLocaleString("es-MX"),
+    entrega: localStorage.getItem("entrega") || "",
+    recibe: localStorage.getItem("recibe") || "",
+    destino: localStorage.getItem("destino") || "",
+    productos: JSON.parse(localStorage.getItem("productosSeleccionados") || "[]"),
+    firmaEntrega: localStorage.getItem("firma_entrega_liquidos") || "",
+    firmaRecibe: localStorage.getItem("firma_recibe_liquidos") || "",
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
   };
 
-  await db.collection("almacenes")
-          .doc("Almacen_Liquidos")
-          .collection("salidas")
-          .add(data);
-  await notificarStarLiquido(data);
-await verificarInventarioYNotificar(data.productos);
+  await db.collection("almacenes").doc("Almacen_Dulces").collection("salidas").add(data);
 
+  // ⭐ Star: notifica la salida
+  await notificarStarSalida(data);
+
+  // 🧠 Alika: controla inventarios
+  await verificarInventarioYNotificar(data.productos);
 
   document.getElementById("folio").textContent = nuevoFolio;
   localStorage.setItem("folio", nuevoFolio);
+  console.log(`✅ Salida ${nuevoFolio} registrada y enviada a bots.`);
+document.querySelector('#btnGuardarDescargar').disabled = false;
 
-  return nuevoFolio;
+    return nuevoFolio;
 }
 
 
@@ -338,6 +293,7 @@ await verificarInventarioYNotificar(data.productos);
 
     // 🧩 Flujo principal
 async function guardarYDescargar(){
+    const boton = document.querySelector('#btnGuardarDescargar');
   if(!productosStr){alert("No hay productos válidos.");return;}
   try{
     await guardarSalida();       // 🔹 incrementa folio
