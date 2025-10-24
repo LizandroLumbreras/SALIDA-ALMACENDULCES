@@ -236,13 +236,13 @@ buscador.addEventListener('input', () => {
 
 async function buscarCoincidencias(texto) {
   try {
-    const pref = toUpper(texto);
+    const pref = toUpper(texto.trim());
     resultadosDiv.innerHTML = '<div style="padding:8px;color:#555;">Buscando...</div>';
     resultadosDiv.style.display = 'block';
 
     let resultados = [];
 
-    // 🔍 1. Buscar por NOMBRE (concepto)
+    // 🔍 1. Buscar por CONCEPTO
     const q1 = await db.collection('productos')
       .where('activo', '==', true)
       .where('concepto', '>=', pref)
@@ -251,12 +251,13 @@ async function buscarCoincidencias(texto) {
 
     q1.forEach(doc => {
       const d = doc.data();
-      if (!EXCLUIDOS.includes(Number(d?.departamento_id))) {
+      // convertir el dep_id a número y comparar correctamente
+      if (!EXCLUIDOS.includes(parseInt(d?.departamento_id))) {
         resultados.push({ id: doc.id, ...d });
       }
     });
 
-    // 🔍 2. Buscar por coincidencia en CÓDIGO DE BARRAS (exacta o inicio)
+    // 🔍 2. Buscar por CÓDIGO DE BARRAS (solo si el texto es numérico)
     if (/^\d+$/.test(texto)) {
       const q2 = await db.collection('productos')
         .where('activo', '==', true)
@@ -266,8 +267,8 @@ async function buscarCoincidencias(texto) {
 
       q2.forEach(doc => {
         const d = doc.data();
-        if (!EXCLUIDOS.includes(Number(d?.departamento_id))) {
-          // Evitar duplicados
+        if (!EXCLUIDOS.includes(parseInt(d?.departamento_id))) {
+          // evitar duplicados
           if (!resultados.find(r => r.id === doc.id)) resultados.push({ id: doc.id, ...d });
         }
       });
@@ -295,7 +296,7 @@ async function buscarCoincidencias(texto) {
     resultadosDiv.style.display = 'block';
 
   } catch (e) {
-    console.error(e);
+    console.error('Error en buscarCoincidencias:', e);
     resultadosDiv.style.display = 'none';
   }
 }
