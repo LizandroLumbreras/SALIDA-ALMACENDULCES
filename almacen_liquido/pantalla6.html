@@ -307,6 +307,48 @@ async function guardarYDescargar(){
     alert("❌ Error: "+e.message);
   }
 }
+/* ================== CARGA INICIAL DE DATOS ================== */
+document.addEventListener("DOMContentLoaded", () => {
+  const salida = {
+    folio: localStorage.getItem("folio") || "",
+    fecha: localStorage.getItem("fecha") || "",
+    entrega: localStorage.getItem("entrega") || "",
+    recibe: localStorage.getItem("recibe") || "",
+    destino: localStorage.getItem("destino") || "",
+    productos: JSON.parse(localStorage.getItem("productosSeleccionados") || "[]"),
+    firmaEntrega: localStorage.getItem("firma_entrega_liquidos") || "",
+    firmaRecibe: localStorage.getItem("firma_recibe_liquidos") || ""
+  };
+
+  // ⚠️ Si faltan datos, muestra alerta
+  if (!salida.folio || salida.productos.length === 0) {
+    document.getElementById("alerta").style.display = "block";
+    return;
+  }
+
+  // ✅ Carga los datos en pantalla
+  document.getElementById("folio").textContent = salida.folio;
+  document.getElementById("fecha").textContent = salida.fecha;
+  document.getElementById("entrega").textContent = salida.entrega;
+  document.getElementById("recibe").textContent = salida.recibe;
+  document.getElementById("destino").textContent = salida.destino;
+
+  const tbody = document.getElementById("tabla-productos");
+  salida.productos.forEach(p => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${p.codigo}</td><td>${p.descripcion}</td><td>${p.cantidad}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // 🖊️ Carga firmas
+  document.getElementById("firmaEntrega").src = salida.firmaEntrega;
+  document.getElementById("firmaRecibe").src = salida.firmaRecibe;
+
+  // 🔓 Muestra resumen y botón
+  document.getElementById("resumenSalida").style.display = "block";
+  document.getElementById("btnGuardarDescargar").style.display = "block";
+  document.querySelector('#btnGuardarDescargar').disabled = false;
+});
 
 // 🧠 Importante: mover fuera de la función
 const boton = document.querySelector('#btnGuardarDescargar');
