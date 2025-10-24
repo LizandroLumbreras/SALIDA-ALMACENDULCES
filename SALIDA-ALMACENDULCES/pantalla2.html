@@ -207,7 +207,13 @@ document.querySelector('.contenedor').appendChild(resultadosDiv);
   if (typingTimer) clearTimeout(typingTimer);
   const val = (buscador.value || '').trim();
   if (val.length < 2) { ocultarProducto(); return; }
-  typingTimer = setTimeout(() => buscarCoincidenciasDulces(val), 300);
+  if (processing) return;
+typingTimer = setTimeout(async () => {
+  processing = true;
+  await buscarCoincidenciasDulces(val);
+  processing = false;
+}, 300);
+
 });
      buscador.addEventListener('change', () => {
         buscador.value = (buscador.value || '').replace(/[\r\n\t]+/g, '');
