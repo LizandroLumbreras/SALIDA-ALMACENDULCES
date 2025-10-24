@@ -100,8 +100,8 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    const BOT_TOKEN_INV = "8495270080:AAFBJ8Vxi6ZhqP6ghtJqMal9RZFz3YJBpo8";
-    const CHAT_ID = "6617988297";
+const BOT_ALIKA = "8241239653:AAH3-eS7XrRlO4G6LO5MydlYlOm2Um18SGE";
+const CHAT_ALIKA = "6617988297";
 
     // 🧠 Códigos a ignorar
     const CODIGOS_IGNORADOS = ["060028","210004","210010","2382","250010","3062","3217","4451","7503033"];
@@ -221,11 +221,12 @@ async function verificarInventarioYNotificar(productos){
             msg += `🔢 Mínimo definido: ${minimo}\n🏠 Almacén: Dulces\n📅 ${new Date().toLocaleString("es-MX")}`;
           }
 
-          await fetch(`https://api.telegram.org/bot${BOT_TOKEN_INV}/sendMessage`, {
+          await fetch(`https://api.telegram.org/bot${BOT_ALIKA}/sendMessage`, {
+
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
-              chat_id: CHAT_ID,
+              chat_id: CHAT_ALIKA,
               text: msg,
               parse_mode: "Markdown"
             })
