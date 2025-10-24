@@ -225,7 +225,11 @@ async function buscarCoincidenciasDulces(texto) {
     resultadosDiv.style.display = 'block';
 
     const productosRef = db.collection('productos');
-    const snap = await productosRef.where('activo', '==', true).get();
+    const snap = await productosRef
+  .where('activo', '==', true)
+  .where('departamento_id', 'in', DULCES_IDS)
+  .get();
+
 
     resultadosDiv.innerHTML = '';
     let encontrados = 0;
