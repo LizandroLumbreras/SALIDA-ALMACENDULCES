@@ -291,22 +291,26 @@ document.querySelector('#btnGuardarDescargar').disabled = false;
       pdf.save(`Comprobante_${(folio||'SAL-DUL').replace(/\s+/g,'_')}.pdf`);
     }
 
-    // 🧩 Flujo principal
+// 🧩 Flujo principal
 async function guardarYDescargar(){
-    const boton = document.querySelector('#btnGuardarDescargar');
-  if(!productosStr){alert("No hay productos válidos.");return;}
+  const productosStr = localStorage.getItem("productosSeleccionados");
+  if(!productosStr){ 
+    alert("⚠️ No hay productos válidos en la salida."); 
+    return; 
+  }
   try{
-    await guardarSalida();       // 🔹 incrementa folio
+    await guardarSalida();       // 🔹 incrementa folio y guarda salida
     await descargarPDF();        // 🔹 genera PDF después de guardar
     localStorage.clear();        // 🔹 limpia datos
-    // Espera 1 segundo adicional para asegurar commit de Firestore
-    setTimeout(()=> window.location.href="index.html", 1000);
+    setTimeout(()=> window.location.href="index.html", 1000); // 🔹 espera 1s antes de redirigir
   }catch(e){
-    alert("Error: "+e.message);
+    alert("❌ Error: "+e.message);
   }
 }
 
-    boton.addEventListener('click',guardarYDescargar);
+// 🧠 Importante: mover fuera de la función
+const boton = document.querySelector('#btnGuardarDescargar');
+boton.addEventListener('click', guardarYDescargar);
   </script>
 </body>
 </html>
