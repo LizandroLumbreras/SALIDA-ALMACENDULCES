@@ -290,7 +290,7 @@ async function buscarPorCodigoDulces(code) {
     for (const v of variantes) {
       const q = await db.collection('productos')
         .where('activo','==', true)
-        .where('departamento_id','in', DULCES_IDS)
+        .where('departamento_id','in', DULCES_IDS.map(String))
         .where('codigoBarra','==', v)
         .limit(1).get();
       if (!q.empty) {
