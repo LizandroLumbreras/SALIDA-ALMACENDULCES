@@ -231,11 +231,7 @@ async function buscarCoincidenciasDulces(texto) {
     resultadosDiv.style.display = 'block';
 
     const productosRef = db.collection('productos');
-    const snap = await productosRef
-  .where('activo', '==', true)
-  .where('departamento_id', 'in', DULCES_IDS)
-  .get();
-
+    const snap = await productosRef.where('activo', '==', true).get();
 
     resultadosDiv.innerHTML = '';
     let encontrados = 0;
@@ -244,13 +240,14 @@ async function buscarCoincidenciasDulces(texto) {
       const d = docSnap.data();
       const concepto = String(d.concepto || '').toLowerCase();
       const codigo = String(d.codigoBarra || '').toLowerCase();
+
       if (concepto.includes(pref) || codigo.includes(pref)) {
         encontrados++;
         const regex = new RegExp(`(${pref})`, 'gi');
         const resaltado = (d.concepto || '').replace(
-  regex,
-  '<span style="background:#ffeb3b;color:#000;font-weight:bold;border-radius:3px;padding:0 2px;">$1</span>'
-);
+          regex,
+          '<span style="background:#ffeb3b;color:#000;font-weight:bold;border-radius:3px;padding:0 2px;">$1</span>'
+        );
 
         const div = document.createElement('div');
         div.innerHTML = `<b>${resaltado}</b><br><small>${d.codigoBarra || ''}</small>`;
@@ -268,12 +265,12 @@ async function buscarCoincidenciasDulces(texto) {
     if (encontrados === 0) {
       resultadosDiv.innerHTML = '<div style="padding:8px;">Sin resultados</div>';
     }
-
   } catch (err) {
     console.error('Error en buscarCoincidenciasDulces:', err);
     resultadosDiv.style.display = 'none';
   }
 }
+
 
 
 // -------- BUSQUEDA POR CODIGO --------
