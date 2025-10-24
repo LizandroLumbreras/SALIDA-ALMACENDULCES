@@ -288,7 +288,9 @@ document.querySelector('#btnGuardarDescargar').disabled = false;
       const heightMM=canvas.height/pxPerMM+(marginMM*2);
       const pdf=new jsPDF('p','mm',[ticketWidthMM,heightMM]);
       pdf.addImage(imgData,'PNG',marginMM,marginMM,usableWidthMM,canvas.height/pxPerMM);
-      pdf.save(`Comprobante_${(folio||'SAL-DUL').replace(/\s+/g,'_')}.pdf`);
+      const folioTxt = document.getElementById('folio').textContent.trim() || 'SAL-DUL';
+pdf.save(`Comprobante_${folioTxt.replace(/\s+/g,'_')}.pdf`);
+
     }
 
 // 🧩 Flujo principal
