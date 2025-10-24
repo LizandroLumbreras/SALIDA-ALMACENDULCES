@@ -237,35 +237,69 @@ buscador.addEventListener('input', () => {
 async function buscarCoincidencias(texto) {
   try {
     const pref = toUpper(texto);
-    const q = await db.collection('productos')
-      .where('activo','==', true)
-      .where('concepto','>=', pref)
-      .where('concepto','<=', pref + '\uf8ff')
-      .limit(15).get();
+    resultadosDiv.innerHTML = '<div style="padding:8px;color:#555;">Buscando...</div>';
+    resultadosDiv.style.display = 'block';
 
-    if (q.empty) { resultadosDiv.style.display='none'; return; }
+    let resultados = [];
 
-    resultadosDiv.innerHTML = '';
-    q.forEach(doc => {
+    // 🔍 1. Buscar por NOMBRE (concepto)
+    const q1 = await db.collection('productos')
+      .where('activo', '==', true)
+      .where('concepto', '>=', pref)
+      .where('concepto', '<=', pref + '\uf8ff')
+      .limit(10).get();
+
+    q1.forEach(doc => {
       const d = doc.data();
-      if (EXCLUIDOS.includes(Number(d?.departamento_id))) return;
+      if (!EXCLUIDOS.includes(Number(d?.departamento_id))) {
+        resultados.push({ id: doc.id, ...d });
+      }
+    });
+
+    // 🔍 2. Buscar por coincidencia en CÓDIGO DE BARRAS (exacta o inicio)
+    if (/^\d+$/.test(texto)) {
+      const q2 = await db.collection('productos')
+        .where('activo', '==', true)
+        .where('codigoBarra', '>=', texto)
+        .where('codigoBarra', '<=', texto + '\uf8ff')
+        .limit(10).get();
+
+      q2.forEach(doc => {
+        const d = doc.data();
+        if (!EXCLUIDOS.includes(Number(d?.departamento_id))) {
+          // Evitar duplicados
+          if (!resultados.find(r => r.id === doc.id)) resultados.push({ id: doc.id, ...d });
+        }
+      });
+    }
+
+    // 🧾 Mostrar resultados
+    resultadosDiv.innerHTML = '';
+    if (resultados.length === 0) {
+      resultadosDiv.innerHTML = '<div style="padding:8px;">Sin resultados</div>';
+      return;
+    }
+
+    resultados.forEach(d => {
       const item = document.createElement('div');
-      item.textContent = d.concepto + " (" + (d.codigoBarra || d.id) + ")";
+      item.textContent = `${d.concepto || 'Sin descripción'} (${d.codigoBarra || d.id})`;
       item.style.padding = '8px';
       item.style.borderBottom = '1px solid #ccc';
       item.style.cursor = 'pointer';
       item.addEventListener('click', () => {
-        mostrarProducto({ id: doc.id, ...d });
+        mostrarProducto(d);
         resultadosDiv.style.display = 'none';
       });
       resultadosDiv.appendChild(item);
     });
     resultadosDiv.style.display = 'block';
-  } catch(e){
+
+  } catch (e) {
     console.error(e);
-    resultadosDiv.style.display='none';
+    resultadosDiv.style.display = 'none';
   }
 }
+
 
 
   // ===== Consultas Firestore =====
