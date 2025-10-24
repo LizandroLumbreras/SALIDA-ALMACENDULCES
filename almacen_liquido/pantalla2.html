@@ -240,39 +240,25 @@ async function buscarCoincidencias(texto) {
     resultadosDiv.innerHTML = '<div style="padding:8px;color:#555;">Buscando...</div>';
     resultadosDiv.style.display = 'block';
 
-    let resultados = [];
-
-    // 🔍 1. Buscar por CONCEPTO
-    const q1 = await db.collection('productos')
+    // 🔍 Paso 1: descargar primeros 50 productos activos ordenados por concepto
+    const q = await db.collection('productos')
       .where('activo', '==', true)
-      .where('concepto', '>=', pref)
-      .where('concepto', '<=', pref + '\uf8ff')
-      .limit(10).get();
+      .orderBy('concepto')
+      .limit(50)
+      .get();
 
-    q1.forEach(doc => {
+    const resultados = [];
+    q.forEach(doc => {
       const d = doc.data();
-      // convertir el dep_id a número y comparar correctamente
-      if (!EXCLUIDOS.includes(parseInt(d?.departamento_id))) {
+      const concepto = toUpper(d.concepto || '');
+      const cod = toUpper(d.codigoBarra || '');
+      if (
+        !EXCLUIDOS.includes(parseInt(d?.departamento_id)) &&
+        (concepto.includes(pref) || cod.includes(pref))
+      ) {
         resultados.push({ id: doc.id, ...d });
       }
     });
-
-    // 🔍 2. Buscar por CÓDIGO DE BARRAS (solo si el texto es numérico)
-    if (/^\d+$/.test(texto)) {
-      const q2 = await db.collection('productos')
-        .where('activo', '==', true)
-        .where('codigoBarra', '>=', texto)
-        .where('codigoBarra', '<=', texto + '\uf8ff')
-        .limit(10).get();
-
-      q2.forEach(doc => {
-        const d = doc.data();
-        if (!EXCLUIDOS.includes(parseInt(d?.departamento_id))) {
-          // evitar duplicados
-          if (!resultados.find(r => r.id === doc.id)) resultados.push({ id: doc.id, ...d });
-        }
-      });
-    }
 
     // 🧾 Mostrar resultados
     resultadosDiv.innerHTML = '';
@@ -283,7 +269,7 @@ async function buscarCoincidencias(texto) {
 
     resultados.forEach(d => {
       const item = document.createElement('div');
-      item.textContent = `${d.concepto || 'Sin descripción'} (${d.codigoBarra || d.id})`;
+      item.innerHTML = `<b>${d.concepto || 'Sin descripción'}</b><br><small>${d.codigoBarra || d.id}</small>`;
       item.style.padding = '8px';
       item.style.borderBottom = '1px solid #ccc';
       item.style.cursor = 'pointer';
@@ -300,6 +286,7 @@ async function buscarCoincidencias(texto) {
     resultadosDiv.style.display = 'none';
   }
 }
+
 
 
 
