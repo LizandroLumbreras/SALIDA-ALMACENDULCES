@@ -1,0 +1,22 @@
+{
+  "name": "PROVSOFT – Control de Salidas",
+  "short_name": "PROVSOFT",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#00416A",
+  "theme_color": "#0c6cbd",
+  "orientation": "portrait",
+  "description": "Sistema PROVSOFT para registro y monitoreo de salidas de almacén.",
+  "icons": [
+    {
+      "src": "logo_proveedora.webp",
+      "sizes": "192x192",
+      "type": "image/webp"
+    },
+    {
+      "src": "logo_proveedora.webp",
+      "sizes": "512x512",
+      "type": "image/webp"
+    }
+  ]
+}
