@@ -62,7 +62,7 @@
   <div class="contenedor" id="resumenSalida" style="display:none">
     <div class="header">
       <img id="logoEmpresa" class="logo" src="logo_proveedora.webp" alt="Logo La Proveedora" crossOrigin="anonymous">
-      <div class="titulo">Resumen de Salida - Almacén Dulces</div>
+     <div class="titulo">Resumen de Salida - Almacén Líquidos</div>
     </div>
 
     <p><strong>Folio:</strong> <span id="folio"></span></p>
@@ -127,7 +127,7 @@ const CODIGOS_IGNORADOS = ["060028","210004","210010","2382","250010","3062","32
 /* ================== NOTIFICACIÓN STAR ================== */
 async function notificarStarSalida(salida) {
   try {
-    let msg = `🌟 *Nueva salida registrada – Almacén Dulces*\n\n`;
+    let msg = `🌟 *Nueva salida registrada – Almacén Líquidos*\n\n`;
     msg += `📄 Folio: ${salida.folio}\n📅 Fecha: ${salida.fecha}\n👤 Entrega: ${salida.entrega}\n🤝 Recibe: ${salida.recibe}\n📍 Destino: ${salida.destino}\n\n`;
 
     if (Array.isArray(salida.productos) && salida.productos.length > 0) {
@@ -191,11 +191,11 @@ async function verificarInventarioYNotificar(productos) {
             folio: localStorage.getItem("folio") || "",
             fecha: new Date().toISOString(),
             usuario: localStorage.getItem("entrega") || "sistema",
-            descripcion: `Salida registrada desde módulo Almacén Dulces`
+            descripcion: `Salida registrada desde módulo Almacén Líquidos`
           });
 
           // 📦 Mensaje de actualización normal
-          let msg = `📦 *Actualización de inventario – Almacén Dulces*\n`;
+         let msg = `📦 *Actualización de inventario – Almacén Líquidos*\n`;
           msg += `🆔 Código: ${data.codigoBarra}\n📦 ${data.concepto || art.descripcion}\n`;
           msg += `📉 Existencia actual: ${nuevo}\n🔢 Mínimo definido: ${minimo}\n📅 ${new Date().toLocaleString("es-MX")}\n`;
 
@@ -209,7 +209,7 @@ async function verificarInventarioYNotificar(productos) {
           if (nuevo <= minimo) {
             let alerta = `🚨 *ALERTA CRÍTICA DE INVENTARIO*\n`;
             alerta += `📦 ${data.concepto || art.descripcion}\n🆔 Código: ${data.codigoBarra}\n`;
-            alerta += `📉 Existencia: ${nuevo}\n🔢 Mínimo: ${minimo}\n🏠 Almacén Dulces\n`;
+            alerta += `📉 Existencia: ${nuevo}\n🔢 Mínimo: ${minimo}\n🏠 Almacén Líquidos\n`;
             alerta += `⚠️ *REPOSICIÓN URGENTE NECESARIA* 🚨`;
             await fetch(`https://api.telegram.org/bot${BOT_ALIKA}/sendMessage`, {
               method: "POST",
@@ -230,7 +230,7 @@ async function verificarInventarioYNotificar(productos) {
 document.querySelector('#btnGuardarDescargar').disabled = true;
 
   async function guardarSalida() {
-  const folioDoc = db.collection("consecutivos").doc("salidas_dulces");
+  const folioDoc = db.collection("consecutivos").doc("salidas_liquidos");
   let nuevoFolio = "";
   let numero = 1;
 
@@ -242,7 +242,8 @@ document.querySelector('#btnGuardarDescargar').disabled = true;
     await folioDoc.set({ ultimo: 1 });
   }
 
-  nuevoFolio = `SAL-DUL-${String(numero).padStart(4, "0")}`;
+  nuevoFolio = `SAL-LIQ-${String(numero).padStart(4, "0")}`;
+
 
   const data = {
     folio: nuevoFolio,
@@ -256,7 +257,7 @@ document.querySelector('#btnGuardarDescargar').disabled = true;
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
   };
 
-  await db.collection("almacenes").doc("Almacen_Dulces").collection("salidas").add(data);
+  await db.collection("almacenes").doc("Almacen_Liquidos").collection("salidas").add(data);
 
   // ⭐ Star: notifica la salida
   await notificarStarSalida(data);
