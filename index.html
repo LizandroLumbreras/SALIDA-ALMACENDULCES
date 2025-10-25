@@ -58,5 +58,12 @@
       🥤 Salida – Almacén Líquidos
     </a>
   </div>
+  <script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./service-worker.js")
+  .then(() => console.log("✅ Service Worker activo – PROVSOFT raíz"))
+  .catch(err => console.error("⚠️ Error SW:", err));
+}
+</script>
 </body>
 </html>
