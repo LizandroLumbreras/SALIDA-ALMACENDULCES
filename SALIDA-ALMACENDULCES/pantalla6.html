@@ -156,42 +156,118 @@
       }catch(e){console.warn("Error Star:",e);}
     }
 
-    async function verificarInventarioYNotificar(productos){
-      for(const art of productos){
-        if(CODIGOS_IGNORADOS.includes(art.codigo)) continue;
-        try{
-          const snap=await db.collection("seguimiento_inventario")
-            .where("codigoBarra","==",art.codigo)
-            .where("activo","==",true).get();
-          if(!snap.empty){
-            for(const docu of snap.docs){
-              const d=docu.data();
-              const ref=db.collection("seguimiento_inventario").doc(docu.id);
-              const actual=parseFloat(d.inventario_fijado||0);
-              const min=parseFloat(d.inventario_minimo||0);
-              const sal=parseFloat(art.cantidad||0);
-              const nuevo=Math.max(0,actual-sal);
-              await ref.update({
-                inventario_fijado:nuevo,
-                ultima_salida:new Date().toISOString(),
-                actualizadoEn:new Date().toISOString()
-              });
-              await ref.collection("historial").add({
-                tipo:"salida",cantidad:sal,folio:salida.folio||"SAL-DUL",
-                fecha:new Date().toISOString(),usuario:salida.entrega||"sistema",
-                descripcion:"Salida registrada desde módulo Almacén Dulces"
-              });
-              let msg=`📦 *Actualización de inventario – Almacén Dulces*\n🆔 ${d.codigoBarra}\n📦 ${d.concepto||art.descripcion}\n📉 Existencia: ${nuevo}\n🔢 Mínimo: ${min}\n📅 ${new Date().toLocaleString("es-MX")}`;
-              if(nuevo<=min) msg=`🚨 *ALERTA CRÍTICA*\n${msg}\n⚠️ Reposición urgente requerida.`;
-              await fetch(`https://api.telegram.org/bot${BOT_ALIKA}/sendMessage`,{
-                method:"POST",headers:{"Content-Type":"application/json"},
-                body:JSON.stringify({chat_id:CHAT_ALIKA,text:msg,parse_mode:"Markdown"})
-              });
-            }
-          }
-        }catch(e){console.error("Error Alika:",e);}
-      }
+/* ================== CONTROL ALIKA (ALINEADO Y MEJORADO) ================== */
+async function verificarInventarioYNotificar(productos) {
+  for (const art of productos) {
+    if (CODIGOS_IGNORADOS.includes(art.codigo)) {
+      console.log(`⏩ Código ${art.codigo} (${art.descripcion}) ignorado.`);
+      continue;
     }
+
+    try {
+      const snap = await db.collection("seguimiento_inventario")
+        .where("codigoBarra", "==", art.codigo)
+        .where("activo", "==", true)
+        .get();
+
+      if (snap.empty) {
+        console.warn(`⚠️ Código ${art.codigo} no encontrado en seguimiento_inventario`);
+        continue;
+      }
+
+      for (const docu of snap.docs) {
+        const data = docu.data();
+        const ref = db.collection("seguimiento_inventario").doc(docu.id);
+
+        const inventarioAnterior = parseFloat(data.inventario_fijado || 0);
+        const inventarioMinimo = parseFloat(data.inventario_minimo || 0);
+        const cantidadSalida = parseFloat(art.cantidad || 0);
+        const nuevoInventario = Math.max(0, inventarioAnterior - cantidadSalida);
+
+        // 📊 Variación porcentual
+        const variacion = inventarioAnterior === 0
+          ? 0
+          : (((nuevoInventario - inventarioAnterior) / inventarioAnterior) * 100).toFixed(2);
+
+        // 🔵 Nivel visual (🟢🟡🔴)
+        const porcentajeStock = inventarioMinimo > 0 ? (nuevoInventario / inventarioMinimo) * 100 : 0;
+        let emojiNivel = "🟢";
+        if (porcentajeStock <= 120 && porcentajeStock > 100) emojiNivel = "🟡";
+        if (porcentajeStock <= 100) emojiNivel = "🔴";
+
+        // 🧮 Actualizar Firestore
+        await ref.update({
+          inventario_fijado: nuevoInventario,
+          ultima_salida: new Date().toISOString(),
+          actualizadoEn: new Date().toISOString()
+        });
+
+        // 🧾 Historial completo
+        await ref.collection("historial").add({
+          tipo: "salida",
+          cantidad: cantidadSalida,
+          folio: salida.folio || "SAL-DUL",
+          fecha: new Date().toISOString(),
+          usuario: salida.entrega || "sistema",
+          inventario_anterior: inventarioAnterior,
+          inventario_resultante: nuevoInventario,
+          descripcion: "Salida automática registrada desde módulo Almacén Dulces"
+        });
+
+        // 🚨 Determinar estado crítico
+        const esCritico = nuevoInventario <= inventarioMinimo;
+
+        // 🧠 Mensaje de actualización
+        const mensajeNormal = `
+<b>📦 Actualización de inventario – Almacén Dulces</b>
+🆔 Código: <b>${data.codigoBarra}</b>
+📦 ${data.concepto || art.descripcion}
+
+📤 <b>Salida:</b> ${cantidadSalida} unidades
+📈 <b>Inventario anterior:</b> ${inventarioAnterior}
+📉 <b>Inventario actual:</b> ${nuevoInventario} ${emojiNivel}
+📊 <b>Variación:</b> ${variacion}% respecto al anterior
+
+🔢 Mínimo definido: ${inventarioMinimo}
+🏠 Almacén: Dulces
+📅 ${new Date().toLocaleString("es-MX")}
+`;
+
+        const mensajeCritico = `
+🚨 <b>ALERTA CRÍTICA DE INVENTARIO</b>
+📦 ${data.concepto || art.descripcion}
+🆔 Código: <b>${data.codigoBarra}</b>
+
+📤 <b>Salida:</b> ${cantidadSalida} unidades
+📈 <b>Inventario anterior:</b> ${inventarioAnterior}
+📉 <b>Inventario actual:</b> ${nuevoInventario} ${emojiNivel} (⚠️ Bajo el mínimo ${inventarioMinimo})
+📊 <b>Variación:</b> ${variacion}% respecto al anterior
+
+🏠 Almacén: Dulces
+📅 ${new Date().toLocaleString("es-MX")}
+💣🔥 <b>¡REPOSICIÓN URGENTE NECESARIA!</b> 🔥💣
+`;
+
+        // 📨 Enviar mensaje a Telegram (ALIKA)
+        await fetch(`https://api.telegram.org/bot${BOT_ALIKA}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: CHAT_ALIKA,
+            text: esCritico ? mensajeCritico : mensajeNormal,
+            parse_mode: "HTML"
+          })
+        });
+
+        console.log(esCritico
+          ? `🚨 Crítico: ${art.codigo} actualizado (${nuevoInventario})`
+          : `📊 Normal: ${art.codigo} actualizado (${nuevoInventario})`);
+      }
+    } catch (err) {
+      console.error("❌ Error en control de inventario (ALIKA):", err);
+    }
+  }
+}
 
     async function guardarSalida(){
       const folioDoc=db.collection("consecutivos").doc("salidas_dulces");
