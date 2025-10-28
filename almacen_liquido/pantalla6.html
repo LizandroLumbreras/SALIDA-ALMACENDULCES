@@ -155,7 +155,7 @@ async function notificarStarSalida(salida) {
   }
 }
 
-/* ================== CONTROL ALIKA ================== */
+/* ================== CONTROL ALIKA (MEJORADO) ================== */
 async function verificarInventarioYNotificar(productos) {
   for (const art of productos) {
     if (CODIGOS_IGNORADOS.includes(art.codigo)) {
@@ -169,59 +169,93 @@ async function verificarInventarioYNotificar(productos) {
         .where('activo', '==', true)
         .get();
 
-      if (!snap.empty) {
-        for (const docu of snap.docs) {
-          const data = docu.data();
-          const ref = db.collection('seguimiento_inventario').doc(docu.id);
+      if (snap.empty) {
+        console.warn(`⚠️ Código ${art.codigo} no encontrado en seguimiento_inventario`);
+        continue;
+      }
 
-          const invActual = parseFloat(data.inventario_fijado || 0);
-          const minimo = parseFloat(data.inventario_minimo || 0);
-          const salida = parseFloat(art.cantidad || 0);
-          const nuevo = Math.max(0, invActual - salida);
+      for (const docu of snap.docs) {
+        const data = docu.data();
+        const ref = db.collection('seguimiento_inventario').doc(docu.id);
 
-          await ref.update({
-            inventario_fijado: nuevo,
-            ultima_salida: new Date().toISOString(),
-            actualizadoEn: new Date().toISOString()
-          });
+        const inventarioAnterior = parseFloat(data.inventario_fijado || 0);
+        const inventarioMinimo = parseFloat(data.inventario_minimo || 0);
+        const salida = parseFloat(art.cantidad || 0);
+        const nuevoInventario = Math.max(0, inventarioAnterior - salida);
 
-          await ref.collection("historial").add({
-            tipo: "salida",
-            cantidad: salida,
-            folio: localStorage.getItem("folio") || "",
-            fecha: new Date().toISOString(),
-            usuario: localStorage.getItem("entrega") || "sistema",
-            descripcion: `Salida registrada desde módulo Almacén Líquidos`
-          });
+        // 📊 Cálculo de variación porcentual
+        const variacion = inventarioAnterior === 0 ? 0 :
+          (((nuevoInventario - inventarioAnterior) / inventarioAnterior) * 100).toFixed(2);
 
-          // 📦 Mensaje de actualización normal
-         let msg = `📦 *Actualización de inventario – Almacén Líquidos*\n`;
-          msg += `🆔 Código: ${data.codigoBarra}\n📦 ${data.concepto || art.descripcion}\n`;
-          msg += `📉 Existencia actual: ${nuevo}\n🔢 Mínimo definido: ${minimo}\n📅 ${new Date().toLocaleString("es-MX")}\n`;
+        // 🧮 Actualización Firestore
+        await ref.update({
+          inventario_fijado: nuevoInventario,
+          ultima_salida: new Date().toISOString(),
+          actualizadoEn: new Date().toISOString()
+        });
 
-          await fetch(`https://api.telegram.org/bot${BOT_ALIKA}/sendMessage`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chat_id: CHAT_ALIKA, text: msg, parse_mode: "Markdown" })
-          });
+        // 🕒 Registro en historial completo
+        await ref.collection("historial").add({
+          tipo: "salida",
+          cantidad: salida,
+          folio: localStorage.getItem("folio") || "",
+          fecha: new Date().toISOString(),
+          usuario: localStorage.getItem("entrega") || "sistema",
+          inventario_anterior: inventarioAnterior,
+          inventario_resultante: nuevoInventario,
+          descripcion: `Salida automática registrada desde módulo Almacén Líquidos`
+        });
 
-          // 🚨 Alerta crítica
-          if (nuevo <= minimo) {
-            let alerta = `🚨 *ALERTA CRÍTICA DE INVENTARIO*\n`;
-            alerta += `📦 ${data.concepto || art.descripcion}\n🆔 Código: ${data.codigoBarra}\n`;
-            alerta += `📉 Existencia: ${nuevo}\n🔢 Mínimo: ${minimo}\n🏠 Almacén Líquidos\n`;
-            alerta += `⚠️ *REPOSICIÓN URGENTE NECESARIA* 🚨`;
-            await fetch(`https://api.telegram.org/bot${BOT_ALIKA}/sendMessage`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ chat_id: CHAT_ALIKA, text: alerta, parse_mode: "Markdown" })
-            });
-            console.log(`🚨 ALIKA: alerta crítica enviada (${art.codigo})`);
-          }
-        }
+        // 🧠 Generar mensajes ALIKA
+        const esCritico = nuevoInventario <= inventarioMinimo;
+
+        const mensajeNormal = `
+<b>📦 Actualización de inventario – Almacén Líquidos</b>
+🆔 Código: <b>${data.codigoBarra}</b>
+📦 ${data.concepto || art.descripcion}
+
+📤 <b>Salida:</b> ${salida} unidades
+📈 <b>Inventario anterior:</b> ${inventarioAnterior}
+📉 <b>Inventario actual:</b> ${nuevoInventario}
+📊 <b>Variación:</b> ${variacion}% respecto al anterior
+
+🔢 Mínimo definido: ${inventarioMinimo}
+🏠 Almacén: Líquidos
+📅 ${new Date().toLocaleString("es-MX")}
+`;
+
+        const mensajeCritico = `
+🚨 <b>ALERTA CRÍTICA DE INVENTARIO</b>
+📦 ${data.concepto || art.descripcion}
+🆔 Código: <b>${data.codigoBarra}</b>
+
+📤 <b>Salida:</b> ${salida} unidades
+📈 <b>Inventario anterior:</b> ${inventarioAnterior}
+📉 <b>Inventario actual:</b> ${nuevoInventario} (⚠️ Bajo el mínimo ${inventarioMinimo})
+📊 <b>Variación:</b> ${variacion}% respecto al anterior
+
+🏠 Almacén: Líquidos
+📅 ${new Date().toLocaleString("es-MX")}
+💣🔥 <b>¡REPOSICIÓN URGENTE NECESARIA!</b> 🔥💣
+`;
+
+        // 📨 Enviar a Telegram (actualización + alerta crítica si aplica)
+        await fetch(`https://api.telegram.org/bot${BOT_ALIKA}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: CHAT_ALIKA,
+            text: esCritico ? mensajeCritico : mensajeNormal,
+            parse_mode: "HTML"
+          })
+        });
+
+        console.log(esCritico
+          ? `🚨 Alerta crítica enviada para ${art.codigo}`
+          : `📊 Actualización normal enviada para ${art.codigo}`);
       }
     } catch (e) {
-      console.error("❌ Error en verificación inventario:", e);
+      console.error("❌ Error en verificación de inventario:", e);
     }
   }
 }
