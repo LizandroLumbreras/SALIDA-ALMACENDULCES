@@ -100,8 +100,6 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-
-    const DEPTS_DULCES = ["DULCESIEPS", "CHICLEGRAVADO", "DULCESEXENTOS"];
     let productoSeleccionado = null;
     const pad13   = (s) => String(s).replace(/\s+/g,'').padStart(13,'0');
     const normCod = (s) => String(s).trim().replace(/[\s\r\n]+/g, '');
@@ -115,12 +113,9 @@
       return Array.from(set).filter(Boolean);
     }
 
-    function esValido(d) {
-      if (!d) return false;
-      if (d.activo === false) return false;
-      const dep = String(d.departamento || "").toUpperCase();
-      return DEPTS_DULCES.includes(dep);
-    }
+function esValido(d) {
+  return !!d && d.activo !== false;
+}
 
     function mostrarProducto(p) {
       productoSeleccionado = p;
@@ -187,15 +182,21 @@ document.querySelector('.contenedor').appendChild(resultadosDiv);
         processing = true;
 
         try {
-          if (/^\d+$/.test(tCod)) {
-            let ok = await buscarPorCodigoDulces(tCod);
-            if (!ok) ok = await buscarEquivalenteCodigo(tCod);
-            if (!ok) ok = await buscarPorNombreDulces(tCod);
-            if (!ok) await buscarEquivalenteNombre(tCod);
-          } else {
-            let ok = await buscarPorNombreDulces(tCod);
-            if (!ok) await buscarEquivalenteNombre(tCod);
-          }
+if (/^\d+$/.test(tCod)) {
+
+  let ok = await buscarPorCodigoDulces(tCod);
+
+  if (!ok)
+    ok = await buscarEquivalenteManual(tCod);
+
+  if (!ok)
+    ok = await buscarPorNombreDulces(tCod);
+
+} else {
+
+  await buscarPorNombreDulces(tCod);
+
+}
         } catch (err) {
           console.error('[scanner handler]', err);
         } finally {
@@ -221,7 +222,6 @@ typingTimer = setTimeout(async () => {
     }
 
 // Departamentos válidos de dulces
-const DULCES_IDS = [29, 32, 3, 51, 44];
 async function buscarCoincidenciasDulces(texto) {
   try {
     const pref = texto.trim().toLowerCase();
@@ -254,10 +254,13 @@ async function buscarCoincidenciasDulces(texto) {
         div.style.padding = '8px';
         div.style.borderBottom = '1px solid #ccc';
         div.style.cursor = 'pointer';
-        div.onclick = () => {
-          mostrarProducto(d);
-          resultadosDiv.style.display = 'none';
-        };
+div.onclick = () => {
+  mostrarProducto({
+    id: docSnap.id,
+    ...d
+  });
+  resultadosDiv.style.display = 'none';
+};
         resultadosDiv.appendChild(div);
       }
     });
@@ -270,109 +273,154 @@ async function buscarCoincidenciasDulces(texto) {
     resultadosDiv.style.display = 'none';
   }
 }
+    async function buscarEquivalenteManual(code) {
 
+  try {
 
+    const variantes = variantesCodigo(code);
 
+    const snap = await db.collection("productos")
+      .where("activo", "==", true)
+      .get();
+
+    for (const doc of snap.docs) {
+
+      const d = doc.data();
+
+      const equivalentes = d.codigosEquivalentes || [];
+
+      for (const eq of equivalentes) {
+
+        const codigoEq =
+          typeof eq === "string"
+            ? eq
+            : (eq.codigo || eq.codigoBarra || "");
+
+        if (!codigoEq) continue;
+
+        const variantesEq = variantesCodigo(codigoEq);
+
+        if (variantes.some(v => variantesEq.includes(v))) {
+
+          mostrarProducto({
+            id: doc.id,
+            ...d
+          });
+
+          return true;
+        }
+      }
+    }
+
+    return false;
+
+  } catch (err) {
+
+    console.error(err);
+    return false;
+  }
+}
 // -------- BUSQUEDA POR CODIGO --------
 async function buscarPorCodigoDulces(code) {
   try {
+
     const variantes = variantesCodigo(code);
 
     for (const v of variantes) {
-      const byId = await db.collection('productos').doc(v).get();
-      if (byId.exists) { mostrarProducto({ id: byId.id, ...byId.data() }); return true; }
-    }
 
-    for (const v of variantes) {
-      const q = await db.collection('productos')
-        .where('activo','==', true)
-        .where('codigoBarra','==', v)
-        .limit(1).get();
-      if (!q.empty) { mostrarProducto({ id:q.docs[0].id, ...q.docs[0].data() }); return true; }
-    }
+const byId = await db.collection('productos').doc(v).get();
 
-    for (const v of variantes) {
-      const q = await db.collection('productos')
-        .where('activo','==', true)
-        .where('codigosEquivalentes','array-contains', v)
-        .limit(1).get();
-      if (!q.empty) { mostrarProducto({ id:q.docs[0].id, ...q.docs[0].data() }); return true; }
-    }
-
-    ocultarProducto(); return false;
-  } catch(e){ console.error(e); ocultarProducto(); return false; }
+if (byId.exists && byId.data()?.activo !== false) {
+  mostrarProducto({
+    id: byId.id,
+    ...byId.data()
+  });
+  return true;
 }
+    }
 
+    for (const v of variantes) {
+
+      const q = await db.collection('productos')
+        .where('activo', '==', true)
+        .where('codigoBarra', '==', v)
+        .limit(1)
+        .get();
+
+      if (!q.empty) {
+        mostrarProducto({
+          id: q.docs[0].id,
+          ...q.docs[0].data()
+        });
+        return true;
+      }
+    }
+
+    for (const v of variantes) {
+
+      const q = await db.collection('productos')
+        .where('activo', '==', true)
+        .where('codigosEquivalentes', 'array-contains', v)
+        .limit(1)
+        .get();
+
+      if (!q.empty) {
+        mostrarProducto({
+          id: q.docs[0].id,
+          ...q.docs[0].data()
+        });
+        return true;
+      }
+    }
+
+    ocultarProducto();
+    return false;
+
+  } catch (e) {
+    console.error(e);
+    ocultarProducto();
+    return false;
+  }
+}
 // -------- BUSQUEDA POR NOMBRE --------
 async function buscarPorNombreDulces(texto) {
-  try {
-    const pref = toUpper(texto);
-    const q2 = await db.collection('productos')
-      .where('activo','==', true)
-      .where('concepto','>=', pref)
-      .where('concepto','<=', pref + '\uf8ff')
-      .limit(20).get();
 
-    if (!q2.empty)
-      mostrarProducto({ id:q2.docs[0].id, ...q2.docs[0].data() });
-    else
-      ocultarProducto();
-  } catch(e){ console.error(e); ocultarProducto(); }
-}
-
-// -------- EQUIVALENTES --------
-async function buscarEquivalenteCodigo(code) {
   try {
-    const variantes = variantesCodigo(code);
-    for (const v of variantes) {
-      const byId = await db.collection('productos').doc(v).get();
-      if (byId.exists && DULCES_IDS.includes(Number(byId.data()?.departamento_id))) {
-        mostrarProducto({ id: byId.id, ...byId.data() });
-        return true;
-      }
-    }
-    for (const v of variantes) {
-      const q = await db.collection('productos')
-        .where('activo','==', true)
-        .where('departamento_id','in', DULCES_IDS)
-        .where('codigoBarra','==', v)
-        .limit(1).get();
-      if (!q.empty) {
-        mostrarProducto({ id:q.docs[0].id, ...q.docs[0].data() });
-        return true;
-      }
-    }
-    for (const v of variantes) {
-      const q = await db.collection('productos')
-        .where('activo','==', true)
-        .where('departamento_id','in', DULCES_IDS)
-        .where('codigosEquivalentes','array-contains', v)
-        .limit(1).get();
-      if (!q.empty) {
-        mostrarProducto({ id:q.docs[0].id, ...q.docs[0].data() });
-        return true;
-      }
-    }
-    ocultarProducto(); return false;
-  } catch(e){ console.error(e); ocultarProducto(); return false; }
-}
 
-async function buscarEquivalenteNombre(texto) {
-  try {
-    const pref = toUpper(texto);
-    const q = await db.collection('productos')
-      .where('activo','==', true)
-      .where('departamento_id','in', DULCES_IDS)
-      .where('concepto','>=', pref)
-      .where('concepto','<=', pref + '\uf8ff')
-      .limit(20).get();
-    if (!q.empty) {
-      mostrarProducto({ id:q.docs[0].id, ...q.docs[0].data() });
+    const pref = texto.toUpperCase();
+
+    const snap = await db.collection('productos')
+      .where('activo', '==', true)
+      .get();
+
+    const encontrado = snap.docs.find(doc => {
+      const d = doc.data();
+      return String(d.concepto || '')
+        .toUpperCase()
+        .includes(pref);
+    });
+
+    if (encontrado) {
+
+      mostrarProducto({
+        id: encontrado.id,
+        ...encontrado.data()
+      });
+
       return true;
     }
-    ocultarProducto(); return false;
-  } catch(e){ console.error(e); ocultarProducto(); return false; }
+
+    ocultarProducto();
+    return false;
+
+  } catch (e) {
+
+    console.error(e);
+    ocultarProducto();
+    return false;
+  }
 }
+
 // ===== Sonido de confirmación =====
 const beep = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 function playBeep() {
@@ -414,12 +462,19 @@ activarBtn.addEventListener("click", async () => {
 });
 
 async function procesarCodigoEscaneado(code) {
-  const limpio = code.trim();
-  if (!limpio) return;
-  const encontrado = await buscarPorCodigoDulces(limpio);
-  if (encontrado) playBeep(); // sonido solo si el producto fue encontrado
-}
 
+  const limpio = code.trim();
+
+  if (!limpio) return;
+
+  let encontrado = await buscarPorCodigoDulces(limpio);
+
+  if (!encontrado)
+    encontrado = await buscarEquivalenteManual(limpio);
+
+  if (encontrado)
+    playBeep();
+}
 
     // ===== Carrito =====
     document.getElementById('btnAgregar').addEventListener('click', agregarProducto);
